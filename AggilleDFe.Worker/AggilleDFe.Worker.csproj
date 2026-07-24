@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-AggilleDFe.Worker-e8b6ac87-eede-4e23-8275-7eb919dd6c60</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AggilleDFe.Infrastructure\AggilleDFe.Infrastructure.csproj" />
+    <ProjectReference Include="..\AggilleDFe.Application\AggilleDFe.Application.csproj" />
+    <ProjectReference Include="..\AggilleDFe.Domain\AggilleDFe.Domain.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,23 @@
+<MudNavMenu>
+    @foreach (var item in _itens)
+    {
+        <MudNavLink Href="@item.Rota" Icon="@item.Icone" Match="NavLinkMatch.Prefix">
+            @item.Label
+        </MudNavLink>
+    }
+</MudNavMenu>
+
+@code {
+    private record ItemMenu(string Label, string Rota, string Icone);
+
+    private static readonly ItemMenu[] _itens =
+    [
+        new("Home",           "/",                Icons.Material.Filled.Home),
+        new("Empresa",        "/empresas",        Icons.Material.Filled.Business),
+        new("Configuração",   "/configuracao",    Icons.Material.Filled.Settings),
+        new("XMLs",           "/xmls",            Icons.Material.Filled.Description),
+        new("Registros",      "/registros",       Icons.Material.Filled.History),
+        new("Baixar XMLs",    "/baixar-xmls",     Icons.Material.Filled.CloudDownload),
+        new("XMLS Baixados",  "/xmls-baixados",   Icons.Material.Filled.FolderZip),
+    ];
+}

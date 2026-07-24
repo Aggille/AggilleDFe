@@ -1,0 +1,38 @@
+@page "/"
+
+<PageTitle>AggilleDFe</PageTitle>
+
+<MudStack AlignItems="AlignItems.Center" Class="mb-8 mt-4">
+    <MudImage Src="images/background.png" Alt="Aggille" Width="320" ObjectFit="ObjectFit.Contain" />
+    <MudText Typo="Typo.h5" Class="mt-2">AggilleDFe - Gerenciador de Documentos Fiscais</MudText>
+</MudStack>
+
+<MudGrid>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard>
+            <MudCardContent>
+                <MudIcon Icon="@Icons.Material.Filled.Business" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-2">Empresas</MudText>
+                <MudText Typo="Typo.body2">Cadastro e configuração das empresas monitoradas.</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard>
+            <MudCardContent>
+                <MudIcon Icon="@Icons.Material.Filled.CloudDownload" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-2">Baixar XMLs</MudText>
+                <MudText Typo="Typo.body2">Execução manual ou agendada da distribuição de documentos.</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard>
+            <MudCardContent>
+                <MudIcon Icon="@Icons.Material.Filled.FolderZip" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-2">XMLs Baixados</MudText>
+                <MudText Typo="Typo.body2">Relatório dos documentos já baixados por empresa e período.</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>

@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="AggilleDFe.API/AggilleDFe.API.csproj" />
+  <Project Path="AggilleDFe.Application/AggilleDFe.Application.csproj" />
+  <Project Path="AggilleDFe.Domain/AggilleDFe.Domain.csproj" />
+  <Project Path="AggilleDFe.Infrastructure/AggilleDFe.Infrastructure.csproj" />
+  <Project Path="AggilleDFe.Maui/AggilleDFe.Maui.csproj" />
+  <Project Path="AggilleDFe.Web/AggilleDFe.Web.csproj" />
+  <Project Path="AggilleDFe.Worker/AggilleDFe.Worker.csproj" />
+</Solution>

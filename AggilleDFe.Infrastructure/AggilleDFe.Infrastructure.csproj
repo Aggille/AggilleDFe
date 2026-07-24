@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\AggilleDFe.Application\AggilleDFe.Application.csproj" />
+    <ProjectReference Include="..\AggilleDFe.Domain\AggilleDFe.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="Zeus.Net.CTe" Version="2026.7.16.1250" />
+    <PackageReference Include="Zeus.Net.NFe.Danfe.QuestPdf" Version="2026.7.16.1250" />
+    <PackageReference Include="Zeus.Net.NFe.NFCe" Version="2026.7.16.1250" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,44 @@
+## .NET / C#
+bin/
+obj/
+out/
+*.user
+*.suo
+.vs/
+*.swp
+*.vsidx
+.idea/
+
+## Segredos — NUNCA commitar arquivos com valores reais
+.env
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/appsettings.Staging.json
+**/secrets.json
+**/*.pfx
+**/*.p12
+**/*.pem
+
+## XMLs baixados (dados da empresa, não versionar)
+**/xmls-baixados/
+
+## Build e publicação
+publish/
+TestResults/
+coverage/
+
+## Logs
+**/logs/
+*.log
+
+## Docker
+docker-compose.override.yml
+
+## Claude Code (caminhos locais de máquina)
+.claude/
+**/.claude/
+
+## OS
+.DS_Store
+Thumbs.db
+Desktop.ini
