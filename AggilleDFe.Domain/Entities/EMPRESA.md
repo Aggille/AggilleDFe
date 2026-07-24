@@ -17,11 +17,6 @@
 - TEMPO_RETORNO INTEGER,
 - INTERVALO_TENTATIVAS INTEGER,
 - QUANTIDADE_TENTATIVAS INTEGER,
-- SSL_LIB INTEGER,
-- SSL_CRYPT INTEGER,
-- SSL_HTTP_LIB INTEGER,
-- SSL_XML_SIGN_LIB INTEGER,
-- SSL_TYPE INTEGER,
 - EMAIL_ENVIO_NOTIFICACOES VARCHAR(1024),
 - SERVIDOR_SMTP VARCHAR(200),
 - USUARIO_SMTP VARCHAR(50),
@@ -39,4 +34,23 @@
 - MANIFESTA VARCHAR(1),
 - POSICAO INTEGER,
 - INATIVO VARCHAR(1),
-- ULTIMO_NSU_CTE INTEGER
+- ULTIMO_NSU_CTE INTEGER,
+- HORA_INICIAL TIME,
+- HORA_FINAL TIME
+
+- HORA_INICIAL/HORA_FINAL: janela de horário em que o Worker pode baixar os
+  XMLs dessa empresa automaticamente. Se ambos estiverem preenchidos, o
+  download automático (agendado) só ocorre com a hora atual dentro da janela;
+  se algum estiver vazio, não há restrição. Execução manual (ex.: botão
+  "Baixar XMLs" na tela de Empresas) sempre ignora essa janela. Ver
+  `AggilleDFe.Application/Services/JANELA_EXECUCAO.md`.
+
+# Observações
+
+- Os campos SSL_LIB, SSL_CRYPT, SSL_HTTP_LIB, SSL_XML_SIGN_LIB e SSL_TYPE
+  (presentes na tela legada de cadastro de empresa) foram removidos: são
+  configurações da versão Delphi/Object Pascal antiga do Zeus DFe e não têm
+  correspondência em nenhuma classe do pacote NuGet Zeus.Net (`DFe.*`/`NFe.*`),
+  conforme inspeção por reflexão das DLLs referenciadas
+  (`Zeus.Net.NFe.NFCe`/`Zeus.Net.CTe` 2026.7.16.1250). Ver `ZEUS_CONFIGURACAO.md`
+  em `AggilleDFe.Infrastructure/Integrations`.

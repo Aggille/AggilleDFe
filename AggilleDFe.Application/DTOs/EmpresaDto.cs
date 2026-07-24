@@ -1,11 +1,12 @@
-namespace AggilleDFe.Domain.Entities;
+namespace AggilleDFe.Application.DTOs;
 
-public class Empresa
+public class EmpresaDto
 {
     public int Id { get; set; }
-    public string? RazaoSocial { get; set; }
-    public string? Cnpj { get; set; }
-    public string? Uf { get; set; }
+    public string RazaoSocial { get; set; } = string.Empty;
+    public string Cnpj { get; set; } = string.Empty;
+    public string Uf { get; set; } = string.Empty;
+
     public string? CertificadoDigital { get; set; }
     public string? SenhaCertificado { get; set; }
     public string? PastaXml { get; set; }
@@ -29,9 +30,9 @@ public class Empresa
     public int? PortaPop { get; set; }
     public int? PortaSmtp { get; set; }
     public string? Ie { get; set; }
-    public string? Manifesta { get; set; }
+    public bool Manifesta { get; set; }
     public int? Posicao { get; set; }
-    public string? Inativo { get; set; }
+    public bool Inativo { get; set; }
     public int? UltimoNsuCte { get; set; }
     public TimeOnly? HoraInicial { get; set; }
     public TimeOnly? HoraFinal { get; set; }

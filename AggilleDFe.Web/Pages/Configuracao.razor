@@ -1,6 +1,183 @@
 @page "/configuracao"
+@using System.Net
+@using System.Net.Http.Json
+@using AggilleDFe.Application.DTOs
+@using AggilleDFe.Web.Shared
+@inject HttpClient Http
+@inject ISnackbar Snackbar
 
 <PageTitle>Configuração</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-4">Configuração</MudText>
-<MudAlert Severity="Severity.Info">Tela ainda a definir.</MudAlert>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudForm Model="_model">
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudInputControl Label="C.N.P.J." Variant="Variant.Outlined">
+                    <InputContent>
+                        <MudMask @bind-Text="_model.CnpjEmpresa" Mask="@CnpjMask.Mask" Variant="Variant.Outlined"
+                                 Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search"
+                                 AdornmentColor="Color.Primary" OnAdornmentClick="BuscarDadosCnpj" />
+                    </InputContent>
+                </MudInputControl>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_model.NomeEmpresa" Label="Razão Social" Variant="Variant.Outlined" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="_model.TempoExecucao" Label="Tempo de Execução (minutos)" Variant="Variant.Outlined" Min="1" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="_model.PortaApi" Label="Porta da API" Variant="Variant.Outlined" Min="1" Max="65535" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_model.UsuarioApi" Label="Usuário da API" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_model.SenhaApi" Label="Senha da API" Variant="Variant.Outlined" InputType="InputType.Password" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudSwitch @bind-Value="_model.ApiAtiva" Color="Color.Primary" Label="API Ativa" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSwitch @bind-Value="_model.ProcessarIndividualmente" Color="Color.Primary" Label="Processar uma empresa de cada vez" />
+            </MudItem>
+        </MudGrid>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" Class="mt-4" Style="align-self:flex-start" OnClick="Salvar" Disabled="_salvando">
+            Salvar
+        </MudButton>
+    </MudForm>
+</MudPaper>
+
+@code {
+    private ConfiguracaoDto _model = new();
+    private bool _salvando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        const int tentativas = 5;
+
+        for (var tentativa = 1; tentativa <= tentativas; tentativa++)
+        {
+            try
+            {
+                var resposta = await Http.GetAsync("api/v1/configuracao");
+                if (resposta.IsSuccessStatusCode)
+                {
+                    _model = await resposta.Content.ReadFromJsonAsync<ConfiguracaoDto>() ?? new();
+                }
+
+                return;
+            }
+            catch (HttpRequestException) when (tentativa < tentativas)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(tentativa));
+            }
+            catch (HttpRequestException)
+            {
+                Snackbar.Add("Não foi possível conectar à API para carregar a configuração.", Severity.Warning);
+            }
+        }
+    }
+
+    private async Task BuscarDadosCnpj()
+    {
+        var cnpjLimpo = new string((_model.CnpjEmpresa ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
+        if (cnpjLimpo.Length != 14)
+        {
+            Snackbar.Add("Informe um C.N.P.J. completo (14 caracteres) antes de buscar.", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var resposta = await Http.GetAsync($"api/v1/empresas/consulta-cnpj/{cnpjLimpo}");
+            if (resposta.StatusCode == HttpStatusCode.NotFound)
+            {
+                Snackbar.Add("C.N.P.J. não encontrado.", Severity.Warning);
+                return;
+            }
+
+            if (!resposta.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Não foi possível consultar o C.N.P.J.", Severity.Error);
+                return;
+            }
+
+            var dados = await resposta.Content.ReadFromJsonAsync<CnpjConsultaResultadoDto>();
+            if (dados is not null)
+            {
+                _model.NomeEmpresa = dados.RazaoSocial;
+                Snackbar.Add("Dados encontrados e preenchidos.", Severity.Success);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+    }
+
+    private async Task Salvar()
+    {
+        _salvando = true;
+        try
+        {
+            var payload = new ConfiguracaoDto
+            {
+                Id = _model.Id,
+                CnpjEmpresa = new string((_model.CnpjEmpresa ?? string.Empty).Where(char.IsLetterOrDigit).ToArray()),
+                NomeEmpresa = _model.NomeEmpresa,
+                TempoExecucao = _model.TempoExecucao,
+                PortaApi = _model.PortaApi,
+                UsuarioApi = _model.UsuarioApi,
+                SenhaApi = _model.SenhaApi,
+                ApiAtiva = _model.ApiAtiva,
+                ProcessarIndividualmente = _model.ProcessarIndividualmente
+            };
+
+            var resposta = await Http.PutAsJsonAsync("api/v1/configuracao", payload);
+
+            if (resposta.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Configuração salva com sucesso.", Severity.Success);
+                return;
+            }
+
+            if (resposta.StatusCode == HttpStatusCode.BadRequest)
+            {
+                var problema = await resposta.Content.ReadFromJsonAsync<ProblemaDeValidacao>();
+                if (problema?.Errors is not null)
+                {
+                    foreach (var mensagens in problema.Errors.Values)
+                    {
+                        foreach (var mensagem in mensagens)
+                        {
+                            Snackbar.Add(mensagem, Severity.Error);
+                        }
+                    }
+                }
+                return;
+            }
+
+            Snackbar.Add("Não foi possível salvar a configuração.", Severity.Error);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+
+    private class ProblemaDeValidacao
+    {
+        public Dictionary<string, string[]>? Errors { get; set; }
+    }
+}

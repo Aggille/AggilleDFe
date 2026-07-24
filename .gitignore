@@ -22,6 +22,9 @@ out/
 ## XMLs baixados (dados da empresa, não versionar)
 **/xmls-baixados/
 
+## Schemas XSD do Zeus DFe.NET (baixados à parte, ver DEPLOY.md)
+**/SCHEMAS/
+
 ## Build e publicação
 publish/
 TestResults/

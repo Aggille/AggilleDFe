@@ -1,6 +1,9 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@using AggilleDFe.Web.Services
+@inject ThemeService Theme
 
-<MudThemeProvider />
+<MudThemeProvider IsDarkMode="@Theme.IsDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -11,7 +14,16 @@
                        Color="Color.Inherit"
                        Edge="Edge.Start"
                        OnClick="@(() => _drawerOpen = !_drawerOpen)" />
+        <MudIconButton Icon="@Icons.Material.Filled.Home"
+                       Color="Color.Inherit"
+                       Href="/" />
         <MudText Typo="Typo.h6" Class="ml-2">AggilleDFe</MudText>
+        <MudSpacer />
+        <MudTooltip Text="@(Theme.IsDarkMode ? "Modo claro" : "Modo escuro")">
+            <MudIconButton Icon="@(Theme.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                           Color="Color.Inherit"
+                           OnClick="AlternarTemaAsync" />
+        </MudTooltip>
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Temporary"
@@ -28,4 +40,14 @@
 
 @code {
     private bool _drawerOpen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Theme.InitializeAsync();
+        Theme.OnChange += StateHasChanged;
+    }
+
+    private async Task AlternarTemaAsync() => await Theme.ToggleAsync();
+
+    public void Dispose() => Theme.OnChange -= StateHasChanged;
 }

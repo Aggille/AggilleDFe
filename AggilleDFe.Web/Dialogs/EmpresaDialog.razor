@@ -1,0 +1,365 @@
+@using System.Net
+@using System.Net.Http.Json
+@using AggilleDFe.Application.DTOs
+@using AggilleDFe.Web.Shared
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>@Titulo</TitleContent>
+    <DialogContent>
+        <div style="width: 100%; height: 434px; overflow-y: auto;">
+        @if (_carregando)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
+                <MudTabPanel Text="Dados Gerais">
+                    <MudGrid Class="mt-2">
+                        <MudItem xs="12" sm="4">
+                            @if (Modo == ModoDialogoEmpresa.Incluir)
+                            {
+                                <MudInputControl Label="C.N.P.J." Variant="Variant.Outlined">
+                                    <InputContent>
+                                        <MudMask @bind-Text="_model.Cnpj" Mask="@CnpjMask.Mask" Variant="Variant.Outlined" ReadOnly="@_buscando"
+                                                 Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search"
+                                                 AdornmentColor="Color.Primary" OnAdornmentClick="BuscarDadosCnpj" />
+                                    </InputContent>
+                                </MudInputControl>
+                            }
+                            else
+                            {
+                                <MudTextField Value="@FormatarCnpj(_model.Cnpj)" Label="C.N.P.J." Variant="Variant.Outlined" ReadOnly="true" />
+                            }
+                        </MudItem>
+                        <MudItem xs="12" sm="8">
+                            <MudTextField @bind-Value="_model.RazaoSocial" Label="Razão Social" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudSelect @bind-Value="_model.Uf" Label="UF" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura">
+                                @foreach (var uf in Ufs)
+                                {
+                                    <MudSelectItem Value="@uf">@uf</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudTextField @bind-Value="_model.Ie" Label="I.E." Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField @bind-Value="_model.Posicao" Label="Posição" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSwitch @bind-Value="_model.Manifesta" Color="Color.Primary" Label="Ciência da Operação Automática" Disabled="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSwitch @bind-Value="_model.Inativo" Color="Color.Warning" Label="Inativo" Disabled="@SomenteLeitura" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Certificado Digital">
+                    <MudGrid Class="mt-2">
+                        <MudItem xs="12" sm="9">
+                            <MudTextField @bind-Value="_model.CertificadoDigital" Label="Caminho do Certificado Digital ( .pfx )" HelperText="Caminho completo do arquivo .pfx no servidor onde a API roda" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudTextField @bind-Value="_model.SenhaCertificado" Label="Senha do Certificado Digital" Variant="Variant.Outlined" InputType="InputType.Password" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="7">
+                            <MudTextField @bind-Value="_model.PastaXml" Label="Pasta de XMLs" HelperText="Caminho completo onde os XMLs desta empresa serão salvos (subdividido por ano/mês/tipo)" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="5">
+                            <MudSelect @bind-Value="_model.Ambiente" Label="Ambiente da NFe" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura">
+                                <MudSelectItem Value="@("P")">Produção (taProducao)</MudSelectItem>
+                                <MudSelectItem Value="@("H")">Homologação (taHomologacao)</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_model.UltimoNsu" Label="Último N.S.U. NFe" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField @bind-Value="_model.UltimoNsuCte" Label="Último N.S.U. CTe" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Execução">
+                    <MudGrid Class="mt-2">
+                        <MudItem xs="12" sm="3">
+                            <MudNumericField @bind-Value="_model.Timeout" Label="TimeOut ( em MSEG )" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudNumericField @bind-Value="_model.TempoRetorno" Label="Tempo Retorno ( MSEG )" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudNumericField @bind-Value="_model.IntervaloTentativas" Label="Intervalo Tentativas ( MSEG )" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudNumericField @bind-Value="_model.QuantidadeTentativas" Label="Qtd. Tentativas" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudTimePicker @bind-Time="HoraInicialProxy" Label="Hora Inicial" Variant="Variant.Outlined" Editable="true" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudTimePicker @bind-Time="HoraFinalProxy" Label="Hora Final" Variant="Variant.Outlined" Editable="true" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Class="mt-4">
+                                Se as duas horas estiverem preenchidas, o download automático (Worker) só
+                                roda dentro dessa janela. Execução manual ("Baixar XMLs" na tela de
+                                Empresas) sempre ignora esse horário.
+                            </MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="E-mail Envio (SMTP)">
+                    <MudGrid Class="mt-2">
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_model.EmailEnvioNotificacoes" Label="Email para enviar as notificações" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="8">
+                            <MudTextField @bind-Value="_model.ServidorSmtp" Label="Servidor SMTP" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField @bind-Value="_model.PortaSmtp" Label="Porta SMTP" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudTextField @bind-Value="_model.UsuarioSmtp" Label="Usuário SMTP" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudTextField @bind-Value="_model.SenhaSmtp" Label="Senha SMTP" Variant="Variant.Outlined" InputType="InputType.Password" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudTextField @bind-Value="_model.EmailSmtp" Label="Email SMTP" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudSelect @bind-Value="_model.TipoAutenticacaoSmtp" Label="Autenticação SMTP" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura">
+                                @foreach (var opcao in AutenticacaoOpcoes)
+                                {
+                                    <MudSelectItem Value="@((int?)opcao.Valor)">@opcao.Texto</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="E-mail Recebimento (POP)">
+                    <MudGrid Class="mt-2">
+                        <MudItem xs="12" sm="8">
+                            <MudTextField @bind-Value="_model.ServidorPop" Label="Servidor POP" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField @bind-Value="_model.PortaPop" Label="Porta POP" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudTextField @bind-Value="_model.UsuarioPop" Label="Usuário POP" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudTextField @bind-Value="_model.SenhaPop" Label="Senha POP" Variant="Variant.Outlined" InputType="InputType.Password" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudTextField @bind-Value="_model.EmailPop" Label="Email POP" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudSelect @bind-Value="_model.TipoAutenticacaoPop" Label="Autenticação POP" Variant="Variant.Outlined" ReadOnly="@SomenteLeitura">
+                                @foreach (var opcao in AutenticacaoOpcoes)
+                                {
+                                    <MudSelectItem Value="@((int?)opcao.Valor)">@opcao.Texto</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+        }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Fechar">@(Modo == ModoDialogoEmpresa.Consultar ? "Fechar" : "Cancelar")</MudButton>
+        @if (Modo != ModoDialogoEmpresa.Consultar)
+        {
+            <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="Salvar" Disabled="_salvando">Salvar</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public ModoDialogoEmpresa Modo { get; set; } = ModoDialogoEmpresa.Incluir;
+    [Parameter] public int? EmpresaId { get; set; }
+
+    private static readonly string[] Ufs =
+    [
+        "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
+        "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+    ];
+
+    private static readonly (int Valor, string Texto)[] AutenticacaoOpcoes =
+    [
+        (0, "autTLS"), (1, "autSSL")
+    ];
+
+    private EmpresaDto _model = new();
+    private bool _buscando;
+    private bool _salvando;
+    private bool _carregando;
+
+    private bool SomenteLeitura => Modo == ModoDialogoEmpresa.Consultar;
+
+    private string Titulo => Modo switch
+    {
+        ModoDialogoEmpresa.Alterar => "Alterar Empresa",
+        ModoDialogoEmpresa.Consultar => "Consultar Empresa",
+        _ => "Incluir Empresa"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Modo == ModoDialogoEmpresa.Incluir || EmpresaId is null)
+        {
+            return;
+        }
+
+        _carregando = true;
+        try
+        {
+            var dados = await Http.GetFromJsonAsync<EmpresaDto>($"api/v1/empresas/{EmpresaId}");
+            if (dados is not null)
+            {
+                _model = dados;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API para carregar a empresa.", Severity.Warning);
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+
+    private async Task BuscarDadosCnpj()
+    {
+        var cnpjLimpo = new string((_model.Cnpj ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
+        if (cnpjLimpo.Length != 14)
+        {
+            Snackbar.Add("Informe um C.N.P.J. completo (14 caracteres) antes de buscar.", Severity.Warning);
+            return;
+        }
+
+        _buscando = true;
+        try
+        {
+            var resposta = await Http.GetAsync($"api/v1/empresas/consulta-cnpj/{cnpjLimpo}");
+            if (resposta.StatusCode == HttpStatusCode.NotFound)
+            {
+                Snackbar.Add("C.N.P.J. não encontrado.", Severity.Warning);
+                return;
+            }
+
+            if (!resposta.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Não foi possível consultar o C.N.P.J.", Severity.Error);
+                return;
+            }
+
+            var dados = await resposta.Content.ReadFromJsonAsync<CnpjConsultaResultadoDto>();
+            if (dados is not null)
+            {
+                _model.RazaoSocial = dados.RazaoSocial;
+                _model.Uf = dados.Uf ?? _model.Uf;
+                Snackbar.Add("Dados encontrados e preenchidos.", Severity.Success);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+        finally
+        {
+            _buscando = false;
+        }
+    }
+
+    private TimeSpan? HoraInicialProxy
+    {
+        get => _model.HoraInicial?.ToTimeSpan();
+        set => _model.HoraInicial = value is null ? null : TimeOnly.FromTimeSpan(value.Value);
+    }
+
+    private TimeSpan? HoraFinalProxy
+    {
+        get => _model.HoraFinal?.ToTimeSpan();
+        set => _model.HoraFinal = value is null ? null : TimeOnly.FromTimeSpan(value.Value);
+    }
+
+    private static string SomenteDigitos(string? cnpj) =>
+        new((cnpj ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
+
+    private static string FormatarCnpj(string? cnpj)
+    {
+        var digitos = SomenteDigitos(cnpj);
+        return digitos.Length == 14
+            ? $"{digitos[..2]}.{digitos[2..5]}.{digitos[5..8]}/{digitos[8..12]}-{digitos[12..14]}"
+            : digitos;
+    }
+
+    private async Task Salvar()
+    {
+        _salvando = true;
+        try
+        {
+            _model.Cnpj = new string((_model.Cnpj ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
+
+            var resposta = Modo == ModoDialogoEmpresa.Alterar
+                ? await Http.PutAsJsonAsync($"api/v1/empresas/{EmpresaId}", _model)
+                : await Http.PostAsJsonAsync("api/v1/empresas", _model);
+
+            if (resposta.IsSuccessStatusCode)
+            {
+                Snackbar.Add(Modo == ModoDialogoEmpresa.Alterar ? "Empresa atualizada com sucesso." : "Empresa incluída com sucesso.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+                return;
+            }
+
+            if (resposta.StatusCode == HttpStatusCode.BadRequest)
+            {
+                var problema = await resposta.Content.ReadFromJsonAsync<ProblemaDeValidacao>();
+                if (problema?.Errors is not null)
+                {
+                    foreach (var mensagens in problema.Errors.Values)
+                    {
+                        foreach (var mensagem in mensagens)
+                        {
+                            Snackbar.Add(mensagem, Severity.Error);
+                        }
+                    }
+                }
+                return;
+            }
+
+            Snackbar.Add("Não foi possível salvar a empresa.", Severity.Error);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+
+    private void Fechar() => MudDialog.Cancel();
+
+    private class ProblemaDeValidacao
+    {
+        public Dictionary<string, string[]>? Errors { get; set; }
+    }
+}

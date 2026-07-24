@@ -1,6 +1,186 @@
 @page "/empresas"
+@using System.Text.Json.Serialization
+@using AggilleDFe.Application.DTOs
+@using AggilleDFe.Web.Dialogs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
-<PageTitle>Empresa</PageTitle>
+<PageTitle>Empresas</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Empresa</MudText>
-<MudAlert Severity="Severity.Info">Tela ainda a definir.</MudAlert>
+<MudText Typo="Typo.h4" Class="mb-4">Empresas</MudText>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-4" Wrap="Wrap.Wrap" Spacing="2">
+        <MudStack Row="true" Spacing="2">
+            <MudTextField @bind-Value="_busca" Label="Pesquisar por nome ou C.N.P.J." Variant="Variant.Outlined" Immediate="true"
+                          Style="width: 480px" OnKeyDown="@(e => { if (e.Key == "Enter") { _ = Pesquisar(); } })" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="Pesquisar" Disabled="_carregando">
+                Pesquisar
+            </MudButton>
+        </MudStack>
+        <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AbrirDialogo(ModoDialogoEmpresa.Incluir, null))">
+            Incluir Empresa
+        </MudButton>
+    </MudStack>
+
+    <MudDataGrid Items="_empresas" Loading="_carregando">
+        <Columns>
+            <PropertyColumn Property="x => x.RazaoSocial" Title="Razão Social" />
+            <TemplateColumn Title="C.N.P.J.">
+                <CellTemplate>
+                    @FormatarCnpj(context.Item.Cnpj)
+                </CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Uf" Title="UF" />
+            <TemplateColumn Title="Ações" Sortable="false">
+                <CellTemplate>
+                    <MudTooltip Text="Consultar">
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" OnClick="@(() => AbrirDialogo(ModoDialogoEmpresa.Consultar, context.Item.Id))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Alterar">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => AbrirDialogo(ModoDialogoEmpresa.Alterar, context.Item.Id))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Excluir">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="@(() => ExcluirAsync(context.Item))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Baixar XMLs">
+                        <MudIconButton Icon="@Icons.Material.Filled.CloudDownload" Size="Size.Small" OnClick="@(() => BaixarXmlsAsync(context.Item))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Verificar Status do SEFAZ">
+                        <MudIconButton Icon="@Icons.Material.Filled.NetworkCheck" Size="Size.Small" OnClick="@(() => VerificarStatusSefazAsync(context.Item))" />
+                    </MudTooltip>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            Nenhuma empresa encontrada.
+        </NoRecordsContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    private IEnumerable<EmpresaDto> _empresas = [];
+    private string? _busca;
+    private bool _carregando;
+
+    protected override async Task OnInitializedAsync() => await Pesquisar();
+
+    private async Task Pesquisar()
+    {
+        _carregando = true;
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(_busca)
+                ? "api/v1/empresas"
+                : $"api/v1/empresas?busca={Uri.EscapeDataString(_busca)}";
+
+            var resultado = await Http.GetFromJsonAsync<List<EmpresaDto>>(url);
+            _empresas = resultado ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API para pesquisar empresas.", Severity.Warning);
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+
+    private async Task AbrirDialogo(ModoDialogoEmpresa modo, int? empresaId)
+    {
+        var parametros = new DialogParameters<EmpresaDialog>
+        {
+            { x => x.Modo, modo },
+            { x => x.EmpresaId, empresaId }
+        };
+        var opcoes = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseOnEscapeKey = true };
+
+        var dialogo = await DialogService.ShowAsync<EmpresaDialog>(null, parametros, opcoes);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false } && modo != ModoDialogoEmpresa.Consultar)
+        {
+            await Pesquisar();
+        }
+    }
+
+    private async Task ExcluirAsync(EmpresaDto empresa)
+    {
+        var confirmado = await DialogService.ShowMessageBoxAsync(
+            "Excluir Empresa",
+            $"Tem certeza que deseja excluir a empresa \"{empresa.RazaoSocial}\"? Essa ação não pode ser desfeita.",
+            yesText: "Excluir", cancelText: "Cancelar");
+
+        if (confirmado != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var resposta = await Http.DeleteAsync($"api/v1/empresas/{empresa.Id}");
+            if (resposta.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Empresa excluída com sucesso.", Severity.Success);
+                await Pesquisar();
+            }
+            else
+            {
+                Snackbar.Add("Não foi possível excluir a empresa.", Severity.Error);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+    }
+
+    private Task BaixarXmlsAsync(EmpresaDto empresa)
+    {
+        Snackbar.Add($"Download de XMLs para \"{empresa.RazaoSocial}\" ainda não implementado.", Severity.Info);
+        return Task.CompletedTask;
+    }
+
+    private async Task VerificarStatusSefazAsync(EmpresaDto empresa)
+    {
+        try
+        {
+            var resposta = await Http.GetAsync($"api/v1/empresas/{empresa.Id}/status-sefaz");
+            if (resposta.IsSuccessStatusCode)
+            {
+                var status = await resposta.Content.ReadFromJsonAsync<StatusSefazResultadoDto>();
+                if (status is not null)
+                {
+                    var severidade = status.CStat == 107 ? Severity.Success : Severity.Warning;
+                    Snackbar.Add($"SEFAZ {status.Uf}: {status.CStat} - {status.XMotivo}", severidade);
+                }
+                return;
+            }
+
+            var problema = await resposta.Content.ReadFromJsonAsync<ErroSimples>();
+            Snackbar.Add(problema?.Erro ?? "Não foi possível verificar o status do SEFAZ.", Severity.Error);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+    }
+
+    private class ErroSimples
+    {
+        [JsonPropertyName("erro")]
+        public string? Erro { get; set; }
+    }
+
+    private static string FormatarCnpj(string? cnpj)
+    {
+        if (string.IsNullOrEmpty(cnpj) || cnpj.Length != 14)
+        {
+            return cnpj ?? string.Empty;
+        }
+
+        return $"{cnpj[..2]}.{cnpj[2..5]}.{cnpj[5..8]}/{cnpj[8..12]}-{cnpj[12..14]}";
+    }
+}

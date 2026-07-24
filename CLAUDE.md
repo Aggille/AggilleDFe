@@ -26,7 +26,7 @@
 - Objetivo: Essa plataforma deve ser executada em um tempo determinado, e executação a distribuição de documentos fiscais e baixar os xmls disponivies para a empresa
 - OS xmls baixados devem ficar em uma pasta, separada por cnpj, periodo ( ano / mes ) e tipo de xml ( NFe, CTe, NFSe )
 - Deve ter uma configuração para informar usuário e senha para ser usada no acesso a API
-- Deve ser multi emppresa
+- Deve ser multi empresa
 - Deve ter opção de executar uma empresa a cada ciclo ou todas de uma vez ( em paralelo )
 - Deve ter telas de configuração do ambiente e dados das empresas
 - Deve ter endpoints de api para :
@@ -36,3 +36,6 @@
 - Deve manter o registros dos logs das operações
 - Deve armazenar sempre o último NSU das notas fiscais e conhecimentos para ser utilizado em cada uma das consuiltas.
 - Deve armazenar os dados dos xmls bsixados e opção de imprimir um relatório dos xmls baixados
+- Toda vez que o processo de baixar os xmls, todas as iterações com os eventos deve ser registrad no log, bem como as mensagens de erro.
+- Todos os xmls liberados para serem baixados, devem ser salvos na pasta conforme as regras e um registro com os dados do xml deve ser salvo no banco conforme a entidade XML
+- Os eventos que puderem ser manifestados, devem ser manifestados se a opção estiver marcada no cadastro da empresa, pois a manifestação que permite que o xml seja baixado na próxima iteração.
