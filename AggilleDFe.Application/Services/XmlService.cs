@@ -7,9 +7,9 @@ namespace AggilleDFe.Application.Services;
 
 public class XmlService(IXmlRepository repository) : IXmlService
 {
-    public async Task<IReadOnlyList<XmlDto>> PesquisarAsync(int? empresaId, DateOnly? dataInicial, DateOnly? dataFinal, string? modelo, string? fornecedor, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<XmlDto>> PesquisarAsync(int? empresaId, DateOnly? dataInicial, DateOnly? dataFinal, string? modelo, string? fornecedor, DateOnly? emissaoInicial = null, DateOnly? emissaoFinal = null, CancellationToken cancellationToken = default)
     {
-        var xmls = await repository.PesquisarAsync(empresaId, dataInicial, dataFinal, modelo, fornecedor, cancellationToken);
+        var xmls = await repository.PesquisarAsync(empresaId, dataInicial, dataFinal, modelo, fornecedor, emissaoInicial, emissaoFinal, cancellationToken);
         return xmls.Select(ParaDto).ToList();
     }
 

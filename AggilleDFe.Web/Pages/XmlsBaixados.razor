@@ -28,6 +28,8 @@
         </MudSelect>
         <MudDatePicker @bind-Date="DataInicialProxy" Label="Baixado de" Variant="Variant.Outlined" Style="width: 180px" Editable="true" />
         <MudDatePicker @bind-Date="DataFinalProxy" Label="Baixado até" Variant="Variant.Outlined" Style="width: 180px" Editable="true" />
+        <MudDatePicker @bind-Date="EmissaoInicialProxy" Label="Emissão de" Variant="Variant.Outlined" Style="width: 180px" Editable="true" Clearable="true" />
+        <MudDatePicker @bind-Date="EmissaoFinalProxy" Label="Emissão até" Variant="Variant.Outlined" Style="width: 180px" Editable="true" Clearable="true" />
         <MudTextField @bind-Value="_fornecedor" Label="Fornecedor" Variant="Variant.Outlined" Style="width: 240px" Immediate="true"
                       OnKeyDown="@(e => { if (e.Key == "Enter") { _ = Pesquisar(); } })" />
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="Pesquisar" Disabled="_carregando">
@@ -110,6 +112,8 @@
     private string? _fornecedor;
     private DateOnly? _dataInicial = DateOnly.FromDateTime(DateTime.Now).AddDays(-7);
     private DateOnly? _dataFinal = DateOnly.FromDateTime(DateTime.Now);
+    private DateOnly? _emissaoInicial;
+    private DateOnly? _emissaoFinal;
     private bool _carregando;
 
     private DateTime? DataInicialProxy
@@ -122,6 +126,18 @@
     {
         get => _dataFinal?.ToDateTime(TimeOnly.MinValue);
         set => _dataFinal = value is null ? null : DateOnly.FromDateTime(value.Value);
+    }
+
+    private DateTime? EmissaoInicialProxy
+    {
+        get => _emissaoInicial?.ToDateTime(TimeOnly.MinValue);
+        set => _emissaoInicial = value is null ? null : DateOnly.FromDateTime(value.Value);
+    }
+
+    private DateTime? EmissaoFinalProxy
+    {
+        get => _emissaoFinal?.ToDateTime(TimeOnly.MinValue);
+        set => _emissaoFinal = value is null ? null : DateOnly.FromDateTime(value.Value);
     }
 
     protected override async Task OnInitializedAsync()
@@ -153,6 +169,8 @@
             if (_empresaId is not null) parametros.Add($"empresaId={_empresaId}");
             if (_dataInicial is not null) parametros.Add($"dataInicial={_dataInicial:yyyy-MM-dd}");
             if (_dataFinal is not null) parametros.Add($"dataFinal={_dataFinal:yyyy-MM-dd}");
+            if (_emissaoInicial is not null) parametros.Add($"emissaoInicial={_emissaoInicial:yyyy-MM-dd}");
+            if (_emissaoFinal is not null) parametros.Add($"emissaoFinal={_emissaoFinal:yyyy-MM-dd}");
             if (!string.IsNullOrEmpty(_modelo)) parametros.Add($"modelo={_modelo}");
             if (!string.IsNullOrWhiteSpace(_fornecedor)) parametros.Add($"fornecedor={Uri.EscapeDataString(_fornecedor)}");
 

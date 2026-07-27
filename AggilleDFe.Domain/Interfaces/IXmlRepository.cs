@@ -7,5 +7,5 @@ public interface IXmlRepository
     Task<Xml?> ObterPorChaveAsync(string chave, CancellationToken cancellationToken = default);
     Task IncluirAsync(Xml xml, CancellationToken cancellationToken = default);
     Task AtualizarAsync(Xml xml, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<Xml>> PesquisarAsync(int? empresaId, DateOnly? dataInicial, DateOnly? dataFinal, string? modelo, string? fornecedor, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Xml>> PesquisarAsync(int? empresaId, DateOnly? dataInicial, DateOnly? dataFinal, string? modelo, string? fornecedor, DateOnly? emissaoInicial = null, DateOnly? emissaoFinal = null, CancellationToken cancellationToken = default);
 }

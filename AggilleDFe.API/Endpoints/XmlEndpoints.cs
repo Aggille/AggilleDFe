@@ -9,9 +9,9 @@ public static class XmlEndpoints
     {
         var group = app.MapGroup("/api/v1/xmls").WithTags("XMLs");
 
-        group.MapGet("/", async (int? empresaId, DateOnly? dataInicial, DateOnly? dataFinal, string? modelo, string? fornecedor, IXmlService service) =>
-            Results.Ok(await service.PesquisarAsync(empresaId, dataInicial, dataFinal, modelo, fornecedor)))
-        .WithSummary("Pesquisa os XMLs baixados, com filtros opcionais por empresa, período (data de download), modelo (55=NFe/57=CTe) e nome do fornecedor");
+        group.MapGet("/", async (int? empresaId, DateOnly? dataInicial, DateOnly? dataFinal, string? modelo, string? fornecedor, DateOnly? emissaoInicial, DateOnly? emissaoFinal, IXmlService service) =>
+            Results.Ok(await service.PesquisarAsync(empresaId, dataInicial, dataFinal, modelo, fornecedor, emissaoInicial, emissaoFinal)))
+        .WithSummary("Pesquisa os XMLs baixados, com filtros opcionais por empresa, período (data de download), período de emissão (emissaoInicial/emissaoFinal), modelo (55=NFe/57=CTe) e nome do fornecedor");
 
         group.MapGet("/{chave}/arquivo", async (string chave, IXmlArquivoService xmlArquivoService) =>
         {

@@ -22,7 +22,7 @@ public class XmlRepository(AppDbContext context) : IXmlRepository
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Xml>> PesquisarAsync(int? empresaId, DateOnly? dataInicial, DateOnly? dataFinal, string? modelo, string? fornecedor, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Xml>> PesquisarAsync(int? empresaId, DateOnly? dataInicial, DateOnly? dataFinal, string? modelo, string? fornecedor, DateOnly? emissaoInicial = null, DateOnly? emissaoFinal = null, CancellationToken cancellationToken = default)
     {
         var consulta = context.Xmls.AsQueryable();
 
@@ -39,6 +39,16 @@ public class XmlRepository(AppDbContext context) : IXmlRepository
         if (dataFinal is not null)
         {
             consulta = consulta.Where(x => x.DataDownload <= dataFinal);
+        }
+
+        if (emissaoInicial is not null)
+        {
+            consulta = consulta.Where(x => x.Emissao >= emissaoInicial);
+        }
+
+        if (emissaoFinal is not null)
+        {
+            consulta = consulta.Where(x => x.Emissao <= emissaoFinal);
         }
 
         if (!string.IsNullOrWhiteSpace(modelo))

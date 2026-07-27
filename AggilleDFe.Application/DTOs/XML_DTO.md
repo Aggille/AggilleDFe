@@ -24,9 +24,11 @@ XMLs baixados — permanecem só na entidade:
 - `empresaId` (int, opcional): filtra por uma empresa específica
 - `dataInicial`/`dataFinal` (date, opcionais): filtram pelo campo
   **`DataDownload`** (data em que o XML foi efetivamente baixado — não a data
-  de emissão do documento), intervalo inclusivo dos dois lados. Escolhido por
-  ser o que a tela "XMLs Baixados" nomeia; a data de emissão (`Emissao`) fica
-  visível como coluna no grid, mas não é filtrável nesta tela hoje.
+  de emissão do documento), intervalo inclusivo dos dois lados.
+- `emissaoInicial`/`emissaoFinal` (date, opcionais): filtram pelo campo
+  **`Emissao`** (data de emissão do documento fiscal), intervalo inclusivo dos
+  dois lados — independente de `dataInicial`/`dataFinal`, os dois filtros de
+  período podem ser combinados.
 - Sem filtros, retorna todas as linhas — a tela aplica um período padrão
   (últimos 7 dias, mesmo critério da tela "Registros") para não carregar a
   tabela inteira de uma vez.
