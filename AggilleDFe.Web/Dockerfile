@@ -8,10 +8,12 @@ WORKDIR /src
 
 COPY AggilleDFe.Web/AggilleDFe.Web.csproj AggilleDFe.Web/
 COPY AggilleDFe.Application/AggilleDFe.Application.csproj AggilleDFe.Application/
+COPY AggilleDFe.Domain/AggilleDFe.Domain.csproj AggilleDFe.Domain/
 RUN dotnet restore AggilleDFe.Web/AggilleDFe.Web.csproj
 
 COPY AggilleDFe.Web/ AggilleDFe.Web/
 COPY AggilleDFe.Application/ AggilleDFe.Application/
+COPY AggilleDFe.Domain/ AggilleDFe.Domain/
 
 RUN dotnet publish AggilleDFe.Web/AggilleDFe.Web.csproj -c Release -o /app/publish --no-restore
 

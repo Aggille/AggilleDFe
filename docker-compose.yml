@@ -22,6 +22,7 @@ services:
       retries: 10
 
   api:
+    image: ghcr.io/aggille/aggilledfe-api:latest
     build:
       context: .
       dockerfile: AggilleDFe.API/Dockerfile
@@ -56,6 +57,7 @@ services:
     restart: unless-stopped
 
   worker:
+    image: ghcr.io/aggille/aggilledfe-worker:latest
     build:
       context: .
       dockerfile: AggilleDFe.Worker/Dockerfile
@@ -76,6 +78,7 @@ services:
     restart: unless-stopped
 
   web:
+    image: ghcr.io/aggille/aggilledfe-web:latest
     build:
       context: .
       dockerfile: AggilleDFe.Web/Dockerfile
