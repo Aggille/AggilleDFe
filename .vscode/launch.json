@@ -35,6 +35,14 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_URLS": "http://localhost:5007"
       }
+    },
+    {
+      "name": "Web (Blazor WASM)",
+      "type": "blazorwasm",
+      "request": "launch",
+      "preLaunchTask": "build: Web",
+      "cwd": "${workspaceFolder}/AggilleDFe.Web",
+      "url": "http://localhost:5071"
     }
   ]
 }

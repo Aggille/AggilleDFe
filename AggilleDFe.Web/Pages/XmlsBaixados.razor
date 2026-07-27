@@ -1,6 +1,246 @@
 @page "/xmls-baixados"
+@using System.Text.Json.Serialization
+@using AggilleDFe.Application.DTOs
+@using AggilleDFe.Web.Dialogs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
 <PageTitle>XMLS Baixados</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-4">XMLS Baixados</MudText>
-<MudAlert Severity="Severity.Info">Tela ainda a definir.</MudAlert>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mb-4" AlignItems="AlignItems.End">
+        <MudSelect T="int?" @bind-Value="_empresaId" Label="Empresa" Variant="Variant.Outlined" Style="width: 280px" Clearable="true">
+            <MudSelectItem T="int?" Value="null">Todas as empresas</MudSelectItem>
+            @foreach (var empresa in _empresas)
+            {
+                <MudSelectItem T="int?" Value="empresa.Id">@empresa.RazaoSocial</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="string?" @bind-Value="_modelo" Label="Tipo de Documento" Variant="Variant.Outlined" Style="width: 200px" Clearable="true">
+            <MudSelectItem T="string?" Value="null">Todos</MudSelectItem>
+            <MudSelectItem T="string?" Value="@("55")">NFe</MudSelectItem>
+            <MudSelectItem T="string?" Value="@("57")">CTe</MudSelectItem>
+        </MudSelect>
+        <MudDatePicker @bind-Date="DataInicialProxy" Label="Baixado de" Variant="Variant.Outlined" Style="width: 180px" Editable="true" />
+        <MudDatePicker @bind-Date="DataFinalProxy" Label="Baixado até" Variant="Variant.Outlined" Style="width: 180px" Editable="true" />
+        <MudTextField @bind-Value="_fornecedor" Label="Fornecedor" Variant="Variant.Outlined" Style="width: 240px" Immediate="true"
+                      OnKeyDown="@(e => { if (e.Key == "Enter") { _ = Pesquisar(); } })" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="Pesquisar" Disabled="_carregando">
+            Pesquisar
+        </MudButton>
+    </MudStack>
+
+    <MudDataGrid Items="_xmls" Loading="_carregando" SortMode="SortMode.None">
+        <Columns>
+            <TemplateColumn Title="Empresa">
+                <CellTemplate>@NomeEmpresa(context.Item.EmpresaId)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Modelo">
+                <CellTemplate>@FormatarModelo(context.Item.Modelo)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Núm./Série">
+                <CellTemplate>@context.Item.Numero @(string.IsNullOrEmpty(context.Item.Serie) ? "" : $"/ {context.Item.Serie}")</CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Chave" Title="Chave" />
+            <PropertyColumn Property="x => x.FornecedorNome" Title="Fornecedor/Emitente" />
+            <TemplateColumn Title="Emissão">
+                <CellTemplate>@(context.Item.Emissao?.ToString("dd/MM/yyyy"))</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Baixado em">
+                <CellTemplate>@(context.Item.DataDownload?.ToString("dd/MM/yyyy"))</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Valor Total">
+                <CellTemplate>@(context.Item.ValorTotal?.ToString("C2"))</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Situação">
+                <CellTemplate>
+                    @if (context.Item.Cancelada)
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small">Cancelada</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small">@(context.Item.Situacao ?? "Documento completo")</MudChip>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Ações" Sortable="false">
+                <CellTemplate>
+                    <MudTooltip Text="Baixar XML">
+                        <MudIconButton Icon="@Icons.Material.Filled.CloudDownload" Size="Size.Small" OnClick="@(() => BaixarXml(context.Item))" />
+                    </MudTooltip>
+                    @if (context.Item.Modelo == "55")
+                    {
+                        <MudTooltip Text="Ver DANFE">
+                            <MudIconButton Icon="@Icons.Material.Filled.Receipt" Size="Size.Small" OnClick="@(() => VerDanfeAsync(context.Item))" />
+                        </MudTooltip>
+                        <MudTooltip Text="Ciência da Operação">
+                            <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" OnClick="@(() => ManifestarCienciaAsync(context.Item))" />
+                        </MudTooltip>
+                        <MudTooltip Text="Desconhecimento da Operação">
+                            <MudIconButton Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small" OnClick="@(() => ManifestarComMotivoAsync(context.Item, "desconhecimento", "Desconhecimento da Operação"))" />
+                        </MudTooltip>
+                        <MudTooltip Text="Operação Não Realizada">
+                            <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" OnClick="@(() => ManifestarComMotivoAsync(context.Item, "nao-realizada", "Operação Não Realizada"))" />
+                        </MudTooltip>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            Nenhum XML encontrado para os filtros informados.
+        </NoRecordsContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    private List<EmpresaDto> _empresas = [];
+    private Dictionary<int, string> _nomesEmpresas = [];
+    private IEnumerable<XmlDto> _xmls = [];
+    private int? _empresaId;
+    private string? _modelo;
+    private string? _fornecedor;
+    private DateOnly? _dataInicial = DateOnly.FromDateTime(DateTime.Now).AddDays(-7);
+    private DateOnly? _dataFinal = DateOnly.FromDateTime(DateTime.Now);
+    private bool _carregando;
+
+    private DateTime? DataInicialProxy
+    {
+        get => _dataInicial?.ToDateTime(TimeOnly.MinValue);
+        set => _dataInicial = value is null ? null : DateOnly.FromDateTime(value.Value);
+    }
+
+    private DateTime? DataFinalProxy
+    {
+        get => _dataFinal?.ToDateTime(TimeOnly.MinValue);
+        set => _dataFinal = value is null ? null : DateOnly.FromDateTime(value.Value);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarEmpresasAsync();
+        await Pesquisar();
+    }
+
+    private async Task CarregarEmpresasAsync()
+    {
+        try
+        {
+            var resultado = await Http.GetFromJsonAsync<List<EmpresaDto>>("api/v1/empresas");
+            _empresas = resultado ?? [];
+            _nomesEmpresas = _empresas.ToDictionary(e => e.Id, e => e.RazaoSocial);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API para carregar as empresas.", Severity.Warning);
+        }
+    }
+
+    private async Task Pesquisar()
+    {
+        _carregando = true;
+        try
+        {
+            var parametros = new List<string>();
+            if (_empresaId is not null) parametros.Add($"empresaId={_empresaId}");
+            if (_dataInicial is not null) parametros.Add($"dataInicial={_dataInicial:yyyy-MM-dd}");
+            if (_dataFinal is not null) parametros.Add($"dataFinal={_dataFinal:yyyy-MM-dd}");
+            if (!string.IsNullOrEmpty(_modelo)) parametros.Add($"modelo={_modelo}");
+            if (!string.IsNullOrWhiteSpace(_fornecedor)) parametros.Add($"fornecedor={Uri.EscapeDataString(_fornecedor)}");
+
+            var url = "api/v1/xmls" + (parametros.Count > 0 ? "?" + string.Join("&", parametros) : string.Empty);
+
+            var resultado = await Http.GetFromJsonAsync<List<XmlDto>>(url);
+            _xmls = resultado ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API para pesquisar os XMLs.", Severity.Warning);
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+
+    private void BaixarXml(XmlDto xml) =>
+        NavigationManager.NavigateTo($"{Http.BaseAddress}api/v1/xmls/{xml.Chave}/arquivo", forceLoad: true);
+
+    private async Task VerDanfeAsync(XmlDto xml) =>
+        await JS.InvokeVoidAsync("open", $"{Http.BaseAddress}api/v1/xmls/{xml.Chave}/danfe", "_blank");
+
+    private async Task ManifestarCienciaAsync(XmlDto xml)
+    {
+        var confirmado = await DialogService.ShowMessageBoxAsync(
+            "Ciência da Operação",
+            $"Confirma a manifestação de Ciência da Operação para a chave \"{xml.Chave}\"?",
+            yesText: "Confirmar", cancelText: "Cancelar");
+
+        if (confirmado != true)
+        {
+            return;
+        }
+
+        await EnviarManifestacaoAsync(xml.Chave, "ciencia", null);
+    }
+
+    private async Task ManifestarComMotivoAsync(XmlDto xml, string rota, string titulo)
+    {
+        var parametros = new DialogParameters<MotivoManifestacaoDialog> { { x => x.Titulo, titulo } };
+        var opcoes = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true };
+
+        var dialogo = await DialogService.ShowAsync<MotivoManifestacaoDialog>(titulo, parametros, opcoes);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false } && resultado.Data is string motivo)
+        {
+            await EnviarManifestacaoAsync(xml.Chave, rota, motivo);
+        }
+    }
+
+    private async Task EnviarManifestacaoAsync(string chave, string rota, string? motivo)
+    {
+        try
+        {
+            var resposta = motivo is null
+                ? await Http.PostAsync($"api/v1/xmls/{chave}/manifestacao/{rota}", null)
+                : await Http.PostAsJsonAsync($"api/v1/xmls/{chave}/manifestacao/{rota}", new ManifestacaoMotivoDto { Motivo = motivo });
+
+            if (resposta.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Manifestação realizada com sucesso.", Severity.Success);
+                await Pesquisar();
+                return;
+            }
+
+            var problema = await resposta.Content.ReadFromJsonAsync<ErroSimples>();
+            Snackbar.Add(problema?.Erro ?? "Não foi possível realizar a manifestação.", Severity.Error);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+    }
+
+    private class ErroSimples
+    {
+        [JsonPropertyName("erro")]
+        public string? Erro { get; set; }
+    }
+
+    private string NomeEmpresa(int? empresaId) =>
+        empresaId is not null && _nomesEmpresas.TryGetValue(empresaId.Value, out var nome) ? nome : string.Empty;
+
+    private static string FormatarModelo(string? modelo) => modelo switch
+    {
+        "55" => "NFe",
+        "57" => "CTe",
+        "65" => "NFCe",
+        _ => modelo ?? string.Empty
+    };
+}

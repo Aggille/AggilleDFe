@@ -1,6 +1,68 @@
 @page "/baixar-xmls"
+@using AggilleDFe.Application.DTOs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
 
 <PageTitle>Baixar XMLs</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-4">Baixar XMLs</MudText>
-<MudAlert Severity="Severity.Info">Tela ainda a definir.</MudAlert>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Executa agora a Distribuição DFe para todas as empresas ativas dentro da janela de horário configurada,
+        conforme as definições da tela de Configuração (Tempo de Execução, Processar uma empresa de cada vez).
+        Essa é a mesma rotina executada automaticamente pelo Worker — aqui você dispara um ciclo manualmente,
+        sem precisar esperar o próximo horário agendado.
+    </MudText>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudDownload"
+               OnClick="ExecutarAsync" Disabled="_executando">
+        @(_executando ? "Executando..." : "Executar Agora")
+    </MudButton>
+
+    @if (_executando)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+    }
+
+    @if (_ultimoResultado is not null)
+    {
+        <MudAlert Severity="@(_ultimoResultado.EmpresasComErro > 0 ? Severity.Warning : Severity.Success)" Class="mt-4">
+            @_ultimoResultado.Mensagem
+        </MudAlert>
+    }
+</MudPaper>
+
+@code {
+    private bool _executando;
+    private ResultadoDistribuicaoLoteDto? _ultimoResultado;
+
+    private async Task ExecutarAsync()
+    {
+        _executando = true;
+        _ultimoResultado = null;
+
+        using var httpLongo = new HttpClient { BaseAddress = Http.BaseAddress, Timeout = TimeSpan.FromMinutes(30) };
+        try
+        {
+            var resposta = await httpLongo.PostAsync("api/v1/empresas/baixar-xmls", null);
+            if (resposta.IsSuccessStatusCode)
+            {
+                _ultimoResultado = await resposta.Content.ReadFromJsonAsync<ResultadoDistribuicaoLoteDto>();
+                Snackbar.Add(_ultimoResultado?.Mensagem ?? "Execução concluída.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Não foi possível executar o download dos XMLs.", Severity.Error);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+        finally
+        {
+            _executando = false;
+        }
+    }
+}

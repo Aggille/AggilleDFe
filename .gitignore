@@ -22,11 +22,12 @@ out/
 ## XMLs baixados (dados da empresa, não versionar)
 **/xmls-baixados/
 
-## Schemas XSD do Zeus DFe.NET (baixados à parte, ver DEPLOY.md)
+## Schemas XSD do Zeus DFe.NET (baixados à parte, ver DEPLOY_WINDOWS.md/DEPLOY_LINUX.md)
 **/SCHEMAS/
 
 ## Build e publicação
 publish/
+*.zip
 TestResults/
 coverage/
 
@@ -36,6 +37,7 @@ coverage/
 
 ## Docker
 docker-compose.override.yml
+docker-data/
 
 ## Claude Code (caminhos locais de máquina)
 .claude/

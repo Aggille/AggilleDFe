@@ -137,10 +137,37 @@
         }
     }
 
-    private Task BaixarXmlsAsync(EmpresaDto empresa)
+    private async Task BaixarXmlsAsync(EmpresaDto empresa)
     {
-        Snackbar.Add($"Download de XMLs para \"{empresa.RazaoSocial}\" ainda não implementado.", Severity.Info);
-        return Task.CompletedTask;
+        Snackbar.Add($"Baixando XMLs de \"{empresa.RazaoSocial}\"... isso pode levar alguns instantes.", Severity.Info);
+        _carregando = true;
+
+        // HttpClient.Timeout não pode ser alterado num cliente que já enviou alguma
+        // requisição (lança InvalidOperationException) — por isso usamos uma instância
+        // própria aqui, em vez de alterar o "Http" injetado (compartilhado pela tela).
+        using var httpLongo = new HttpClient { BaseAddress = Http.BaseAddress, Timeout = TimeSpan.FromMinutes(15) };
+        try
+        {
+            var resposta = await httpLongo.PostAsync($"api/v1/empresas/{empresa.Id}/baixar-xmls", null);
+            if (resposta.IsSuccessStatusCode)
+            {
+                var resultado = await resposta.Content.ReadFromJsonAsync<ResultadoBaixarXmlsDto>();
+                Snackbar.Add(resultado?.Mensagem ?? "Download de XMLs concluído.", Severity.Success);
+            }
+            else
+            {
+                var problema = await resposta.Content.ReadFromJsonAsync<ErroSimples>();
+                Snackbar.Add(problema?.Erro ?? "Não foi possível baixar os XMLs.", Severity.Error);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+        finally
+        {
+            _carregando = false;
+        }
     }
 
     private async Task VerificarStatusSefazAsync(EmpresaDto empresa)

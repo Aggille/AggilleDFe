@@ -1,0 +1,92 @@
+@page "/importar-xmls"
+@using AggilleDFe.Application.DTOs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<PageTitle>Importar XMLs</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Importar XMLs</MudText>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Informe uma pasta no servidor onde a API roda. O sistema varre a pasta (e subpastas) em busca de
+        arquivos XML de NFe/CTe já autorizados, cria o registro em XMLs Baixados para as chaves que ainda não
+        existem e associa cada documento à empresa correspondente pelo C.N.P.J. do emitente.
+    </MudText>
+
+    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" AlignItems="AlignItems.End">
+        <MudTextField @bind-Value="_pasta" Label="Pasta" Variant="Variant.Outlined" Style="width: 480px"
+                      Placeholder="Ex.: C:\Xmls\Importar ou /var/xmls/importar" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.UploadFile"
+                   OnClick="ImportarAsync" Disabled="@(_importando || string.IsNullOrWhiteSpace(_pasta))">
+            @(_importando ? "Importando..." : "Importar")
+        </MudButton>
+    </MudStack>
+
+    @if (_importando)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+    }
+
+    @if (_ultimoResultado is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">@_ultimoResultado.Mensagem</MudAlert>
+
+        @if (_ultimoResultado.Erros.Count > 0)
+        {
+            <MudText Typo="Typo.subtitle2" Class="mt-4">Erros:</MudText>
+            <MudList T="string" Dense="true">
+                @foreach (var erro in _ultimoResultado.Erros)
+                {
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.ErrorOutline" IconColor="Color.Error">@erro</MudListItem>
+                }
+            </MudList>
+        }
+    }
+</MudPaper>
+
+@code {
+    private string? _pasta;
+    private bool _importando;
+    private ResultadoImportacaoXmlsDto? _ultimoResultado;
+
+    private async Task ImportarAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_pasta))
+        {
+            return;
+        }
+
+        _importando = true;
+        _ultimoResultado = null;
+
+        using var httpLongo = new HttpClient { BaseAddress = Http.BaseAddress, Timeout = TimeSpan.FromMinutes(30) };
+        try
+        {
+            var resposta = await httpLongo.PostAsJsonAsync("api/v1/xmls/importar", new ImportarXmlsDto { Pasta = _pasta });
+            if (resposta.IsSuccessStatusCode)
+            {
+                _ultimoResultado = await resposta.Content.ReadFromJsonAsync<ResultadoImportacaoXmlsDto>();
+                Snackbar.Add(_ultimoResultado?.Mensagem ?? "Importação concluída.", Severity.Success);
+            }
+            else
+            {
+                var problema = await resposta.Content.ReadFromJsonAsync<ErroSimples>();
+                Snackbar.Add(problema?.Erro ?? "Não foi possível importar os XMLs.", Severity.Error);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+        finally
+        {
+            _importando = false;
+        }
+    }
+
+    private class ErroSimples
+    {
+        public string? Erro { get; set; }
+    }
+}

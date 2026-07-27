@@ -1,6 +1,122 @@
 @page "/registros"
+@using AggilleDFe.Application.DTOs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
 
 <PageTitle>Registros</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-4">Registros</MudText>
-<MudAlert Severity="Severity.Info">Tela ainda a definir.</MudAlert>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mb-4" AlignItems="AlignItems.End">
+        <MudSelect T="int?" @bind-Value="_empresaId" Label="Empresa" Variant="Variant.Outlined" Style="width: 280px" Clearable="true">
+            <MudSelectItem T="int?" Value="null">Todas as empresas</MudSelectItem>
+            @foreach (var empresa in _empresas)
+            {
+                <MudSelectItem T="int?" Value="empresa.Id">@empresa.RazaoSocial</MudSelectItem>
+            }
+        </MudSelect>
+        <MudDatePicker @bind-Date="DataInicialProxy" Label="Período de" Variant="Variant.Outlined" Style="width: 180px" Editable="true" />
+        <MudDatePicker @bind-Date="DataFinalProxy" Label="Período até" Variant="Variant.Outlined" Style="width: 180px" Editable="true" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="Pesquisar" Disabled="_carregando">
+            Pesquisar
+        </MudButton>
+    </MudStack>
+
+    <MudDataGrid Items="_logs" Loading="_carregando" SortMode="SortMode.None">
+        <Columns>
+            <TemplateColumn Title="Data">
+                <CellTemplate>@(context.Item.Data?.ToString("dd/MM/yyyy"))</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Horário">
+                <CellTemplate>@FormatarHorario(context.Item)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Empresa">
+                <CellTemplate>@NomeEmpresa(context.Item.EmpresaId)</CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.QuantidadeXmls" Title="Qtd. XMLs" />
+            <PropertyColumn Property="x => x.Chave" Title="Chave" />
+            <PropertyColumn Property="x => x.Mensagem" Title="Mensagem" />
+        </Columns>
+        <NoRecordsContent>
+            Nenhum registro encontrado para os filtros informados.
+        </NoRecordsContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    private List<EmpresaDto> _empresas = [];
+    private Dictionary<int, string> _nomesEmpresas = [];
+    private IEnumerable<LogDto> _logs = [];
+    private int? _empresaId;
+    private DateOnly? _dataInicial = DateOnly.FromDateTime(DateTime.Now).AddDays(-7);
+    private DateOnly? _dataFinal = DateOnly.FromDateTime(DateTime.Now);
+    private bool _carregando;
+
+    private DateTime? DataInicialProxy
+    {
+        get => _dataInicial?.ToDateTime(TimeOnly.MinValue);
+        set => _dataInicial = value is null ? null : DateOnly.FromDateTime(value.Value);
+    }
+
+    private DateTime? DataFinalProxy
+    {
+        get => _dataFinal?.ToDateTime(TimeOnly.MinValue);
+        set => _dataFinal = value is null ? null : DateOnly.FromDateTime(value.Value);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarEmpresasAsync();
+        await Pesquisar();
+    }
+
+    private async Task CarregarEmpresasAsync()
+    {
+        try
+        {
+            var resultado = await Http.GetFromJsonAsync<List<EmpresaDto>>("api/v1/empresas");
+            _empresas = resultado ?? [];
+            _nomesEmpresas = _empresas.ToDictionary(e => e.Id, e => e.RazaoSocial);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API para carregar as empresas.", Severity.Warning);
+        }
+    }
+
+    private async Task Pesquisar()
+    {
+        _carregando = true;
+        try
+        {
+            var parametros = new List<string>();
+            if (_empresaId is not null) parametros.Add($"empresaId={_empresaId}");
+            if (_dataInicial is not null) parametros.Add($"dataInicial={_dataInicial:yyyy-MM-dd}");
+            if (_dataFinal is not null) parametros.Add($"dataFinal={_dataFinal:yyyy-MM-dd}");
+
+            var url = "api/v1/logs" + (parametros.Count > 0 ? "?" + string.Join("&", parametros) : string.Empty);
+
+            var resultado = await Http.GetFromJsonAsync<List<LogDto>>(url);
+            _logs = resultado ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API para pesquisar os registros.", Severity.Warning);
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+
+    private string NomeEmpresa(int? empresaId) =>
+        empresaId is not null && _nomesEmpresas.TryGetValue(empresaId.Value, out var nome) ? nome : string.Empty;
+
+    private static string FormatarHorario(LogDto log)
+    {
+        if (log.HoraInicio is null) return string.Empty;
+        if (log.HoraFinal is null || log.HoraFinal == log.HoraInicio) return log.HoraInicio.Value.ToString("HH:mm:ss");
+        return $"{log.HoraInicio.Value:HH:mm:ss} - {log.HoraFinal.Value:HH:mm:ss}";
+    }
+}

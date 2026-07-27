@@ -1,0 +1,93 @@
+name: aggilledfe
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aggilledfe
+      POSTGRES_USER: aggilledfe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no arquivo .env (ver .env.example)}
+    volumes:
+      - aggilledfe-db-data:/var/lib/postgresql/data
+    # Sem "ports:" de proposito - o banco so precisa ser alcancado pelos
+    # outros containers deste compose (rede interna). Descomente abaixo se
+    # precisar conectar de fora (ex.: pgAdmin na maquina host):
+    # ports:
+    #   - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aggilledfe -d aggilledfe"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: AggilleDFe.API/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=aggilledfe;Username=aggilledfe;Password=${POSTGRES_PASSWORD}
+      WebClientOrigins__0: ${WEB_PUBLIC_URL:-http://localhost:8080}
+      SchemasPath: /dados/schemas
+    ports:
+      - "5007:8080"
+    volumes:
+      # Pasta física do servidor com XMLs baixados e schemas do Zeus
+      # DFe.NET. Organize dentro dela como /home/dados/xmls,
+      # /home/dados/schemas (subpastas por empresa dentro de cada uma, à
+      # vontade) - e cadastre na tela de Empresas os caminhos DENTRO do
+      # container (ex.: /dados/xmls/...), não o caminho no servidor.
+      - /home/dados:/dados
+      # Pasta física com os certificados digitais (.pfx), montada à parte -
+      # cadastre o "Caminho do Certificado Digital" na tela de Empresas como
+      # /certificados/empresa1.pfx (não /dados/Certificados/...).
+      - /home/dados/Certificados:/certificados
+      # Pasta física com os XMLs de NFe (estrutura já existente do JELS),
+      # montada à parte - cadastre a "Pasta de XMLs" na tela de Empresas
+      # como /nfe/... (não /home/dados/jels/NFE/...).
+      - /home/dados/jels/NFE:/nfe
+      # Pasta física do JELS inteira (pai de NFE, pode ter outras subpastas
+      # do JELS além de NFE) - acessível como /jels dentro do container.
+      - /home/dados/jels:/jels
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: AggilleDFe.Worker/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=aggilledfe;Username=aggilledfe;Password=${POSTGRES_PASSWORD}
+    volumes:
+      # Mesmas pastas montadas na API - precisam ser os MESMOS caminhos
+      # dentro do container (/dados, /certificados, /nfe, /jels), ja que
+      # quem efetivamente baixa/grava os XMLs e le o certificado e o Worker.
+      - /home/dados:/dados
+      - /home/dados/Certificados:/certificados
+      - /home/dados/jels/NFE:/nfe
+      - /home/dados/jels:/jels
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: AggilleDFe.Web/Dockerfile
+    environment:
+      # URL da API alcancavel pelo NAVEGADOR do usuario (nao pelo container -
+      # o Blazor WASM roda no navegador, fora da rede interna do compose).
+      API_URL: ${API_PUBLIC_URL:-http://localhost:5007}
+    ports:
+      - "5071:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  aggilledfe-db-data:

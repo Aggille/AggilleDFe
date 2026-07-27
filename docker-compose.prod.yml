@@ -1,0 +1,73 @@
+name: aggilledfe
+
+# Compose "de producao" - usa as imagens ja publicadas no GHCR (ghcr.io) em
+# vez de buildar a partir do codigo-fonte. So precisa deste arquivo + ".env"
+# preenchido no servidor de destino (nao precisa clonar o repositorio).
+#
+# Uso:
+#   docker login ghcr.io -u <seu-usuario-github> -p <personal-access-token com escopo read:packages>
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aggilledfe
+      POSTGRES_USER: aggilledfe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no arquivo .env (ver .env.example)}
+    volumes:
+      - aggilledfe-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aggilledfe -d aggilledfe"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ghcr.io/aggille/aggilledfe-api:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=aggilledfe;Username=aggilledfe;Password=${POSTGRES_PASSWORD}
+      WebClientOrigins__0: ${WEB_PUBLIC_URL:-http://localhost:8080}
+      SchemasPath: /dados/schemas
+    ports:
+      - "5007:8080"
+    volumes:
+      - /home/dados:/dados
+      - /home/dados/Certificados:/certificados
+      - /home/dados/jels/NFE:/nfe
+      - /home/dados/jels:/jels
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/aggille/aggilledfe-worker:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=aggilledfe;Username=aggilledfe;Password=${POSTGRES_PASSWORD}
+    volumes:
+      - /home/dados:/dados
+      - /home/dados/Certificados:/certificados
+      - /home/dados/jels/NFE:/nfe
+      - /home/dados/jels:/jels
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/aggille/aggilledfe-web:latest
+    environment:
+      API_URL: ${API_PUBLIC_URL:-http://localhost:5007}
+    ports:
+      - "5071:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  aggilledfe-db-data:

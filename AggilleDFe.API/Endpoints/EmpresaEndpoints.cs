@@ -53,6 +53,17 @@ public static class EmpresaEndpoints
         })
         .WithSummary("Consulta o status do serviço da SEFAZ para a UF da empresa, via Zeus DFe.NET");
 
+        group.MapPost("/{id:int}/baixar-xmls", async (int id, IDistribuicaoDfeService distribuicaoDfeService) =>
+        {
+            var (resultado, erro) = await distribuicaoDfeService.ExecutarAsync(id, execucaoManual: true);
+            return resultado is not null ? Results.Ok(resultado) : Results.BadRequest(new { erro });
+        })
+        .WithSummary("Executa manualmente a Distribuição DFe (NFe e CTe) da empresa, baixando os XMLs disponíveis a partir do último NSU");
+
+        group.MapPost("/baixar-xmls", async (IDistribuicaoLoteService distribuicaoLoteService) =>
+            Results.Ok(await distribuicaoLoteService.ExecutarTodasAsync(execucaoManual: true)))
+        .WithSummary("Executa manualmente a Distribuição DFe para todas as empresas elegíveis, respeitando Configuracao.ProcessarIndividualmente");
+
         group.MapGet("/consulta-cnpj/{cnpj}", async (string cnpj, ICnpjConsultaService consultaService) =>
         {
             var resultado = await consultaService.ConsultarAsync(cnpj);

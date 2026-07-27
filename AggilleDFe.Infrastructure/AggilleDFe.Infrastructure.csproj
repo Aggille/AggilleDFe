@@ -14,8 +14,13 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="Zeus.Net.CTe" Version="2026.7.16.1250" />
+    <PackageReference Include="Zeus.Net.NFe.Danfe.Html" Version="2026.7.16.1250" />
     <PackageReference Include="Zeus.Net.NFe.Danfe.QuestPdf" Version="2026.7.16.1250" />
     <PackageReference Include="Zeus.Net.NFe.NFCe" Version="2026.7.16.1250" />
+    <!-- Referência direta para forçar a versão do ImageSharp acima da trazida
+         transitivamente pelo NetBarcode (dependência do Zeus.Net.NFe.Danfe.Html):
+         2.1.1 tem CVEs de severidade alta/moderada já corrigidas na série 2.1.x. -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.13" />
   </ItemGroup>
 
   <PropertyGroup>

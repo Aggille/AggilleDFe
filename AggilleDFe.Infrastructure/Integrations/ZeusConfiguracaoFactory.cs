@@ -56,7 +56,50 @@ public static class ZeusConfiguracaoFactory
             ModeloDocumento = ModeloDocumento.NFe,
             DefineVersaoServicosAutomaticamente = false,
             VersaoNfeStatusServico = VersaoServico.Versao400,
+            VersaoNFeDistribuicaoDFe = VersaoServico.Versao100,
+            VersaoRecepcaoEventoManifestacaoDestinatario = VersaoServico.Versao400,
             ValidarSchemas = validarSchemas,
+            DiretorioSchemas = validarSchemas ? diretorioSchemas : null
+        };
+    }
+
+    /// <summary>
+    /// Constrói a configuração de serviço da distribuição/consulta de CTe. É um tipo
+    /// próprio (<see cref="CTe.Classes.ConfiguracaoServico"/>), distinto do
+    /// <see cref="ConfiguracaoServico"/> usado para NFe — confirmado por reflexão: os
+    /// dois pacotes (Zeus.Net.NFe.NFCe / Zeus.Net.CTe) não compartilham a mesma classe
+    /// de configuração, apenas o <see cref="DFe.Utils.ConfiguracaoCertificado"/> interno.
+    /// </summary>
+    public static CTe.Classes.ConfiguracaoServico CriarCte(Empresa empresa, string? diretorioSchemas)
+    {
+        if (string.IsNullOrWhiteSpace(empresa.Uf) || !Enum.TryParse<Estado>(empresa.Uf, out var uf))
+        {
+            throw new InvalidOperationException($"UF da empresa inválida para o Zeus DFe.NET: \"{empresa.Uf}\".");
+        }
+
+        var ambiente = empresa.Ambiente switch
+        {
+            "P" => TipoAmbiente.Producao,
+            "H" => TipoAmbiente.Homologacao,
+            _ => throw new InvalidOperationException($"Ambiente da CTe inválido para a empresa (esperado \"P\" ou \"H\"): \"{empresa.Ambiente}\".")
+        };
+
+        var validarSchemas = !string.IsNullOrWhiteSpace(diretorioSchemas) && Directory.Exists(diretorioSchemas);
+
+        return new CTe.Classes.ConfiguracaoServico
+        {
+            ConfiguracaoCertificado = new ConfiguracaoCertificado
+            {
+                TipoCertificado = TipoCertificado.A1Arquivo,
+                Arquivo = empresa.CertificadoDigital,
+                Senha = empresa.SenhaCertificado
+            },
+            TimeOut = empresa.Timeout ?? 30000,
+            cUF = uf,
+            tpAmb = ambiente,
+            TipoEmissao = CTe.Classes.Informacoes.Tipos.tpEmis.teNormal,
+            VersaoLayout = CTe.Classes.Servicos.Tipos.versao.ve400,
+            IsValidaSchemas = validarSchemas,
             DiretorioSchemas = validarSchemas ? diretorioSchemas : null
         };
     }

@@ -15,8 +15,14 @@
     - Consultar — abre `EmpresaDialog` (Dialogs/EmpresaDialog.razor) em modo somente-leitura
     - Alterar — abre `EmpresaDialog` em modo edição, salva via `PUT /api/v1/empresas/{id}`
     - Excluir — confirmação via `ShowMessageBoxAsync`, exclui via `DELETE /api/v1/empresas/{id}`
-    - Baixar XMLs — dispara o download dos XMLs da empresa (integração com o
-      Worker/distribuidor fiscal ainda não implementada; hoje mostra um aviso)
+    - Baixar XMLs — dispara `POST /api/v1/empresas/{id}/baixar-xmls`, execução
+      **manual e síncrona** (a chamada aguarda o download terminar; timeout do
+      `HttpClient` elevado para 15 min só nessa chamada) da Distribuição DFe
+      de NFe e CTe via `DistribuicaoDfeService` (ver
+      `AggilleDFe.Infrastructure/Integrations/DISTRIBUICAO_DFE.md`), a partir
+      do último NSU salvo na empresa; mostra o resumo (quantidade de XMLs
+      baixados) em um Snackbar. O loop automático pelo `Worker` (respeitando
+      Hora Inicial/Hora Final) ainda não foi implementado
     - Verificar Status do SEFAZ — consulta `GET
       /api/v1/empresas/{id}/status-sefaz`, que usa o Zeus DFe.NET
       (`ZeusConfiguracaoFactory` + `NFe.Servicos.ServicosNFe.NfeStatusServico`,

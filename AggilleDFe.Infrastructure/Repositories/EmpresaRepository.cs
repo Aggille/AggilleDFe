@@ -24,6 +24,9 @@ public class EmpresaRepository(AppDbContext context) : IEmpresaRepository
     public Task<Empresa?> ObterPorIdAsync(int id, CancellationToken cancellationToken = default) =>
         context.Empresas.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
+    public Task<Empresa?> ObterPorCnpjAsync(string cnpj, CancellationToken cancellationToken = default) =>
+        context.Empresas.FirstOrDefaultAsync(e => e.Cnpj == cnpj, cancellationToken);
+
     public Task<bool> ExisteComCnpjAsync(string cnpj, int? idExcluir = null, CancellationToken cancellationToken = default) =>
         context.Empresas.AnyAsync(e => e.Cnpj == cnpj && (idExcluir == null || e.Id != idExcluir), cancellationToken);
 

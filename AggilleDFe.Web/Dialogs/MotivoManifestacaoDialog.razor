@@ -1,0 +1,25 @@
+<MudDialog>
+    <TitleContent>@Titulo</TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_motivo" Label="Motivo" Variant="Variant.Outlined" Lines="4"
+                      Counter="255" MaxLength="255" AutoFocus="true"
+                      HelperText="Mínimo de 15 caracteres." />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Fechar">Cancelar</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="Confirmar" Disabled="@(!MotivoValido)">Confirmar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string Titulo { get; set; } = "Informe o motivo";
+
+    private string _motivo = string.Empty;
+
+    private bool MotivoValido => _motivo.Trim().Length is >= 15 and <= 255;
+
+    private void Confirmar() => MudDialog.Close(DialogResult.Ok(_motivo.Trim()));
+
+    private void Fechar() => MudDialog.Cancel();
+}

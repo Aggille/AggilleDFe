@@ -23,12 +23,32 @@ por suposição — os tipos/assinaturas abaixo foram confirmados dessa forma.
 | — | `ConfiguracaoServico.tpEmis` (enum `TipoEmissao`) | fixado em `teNormal` — obrigatório para a lib resolver a URL do serviço; sem isso o Zeus falha com "Serviço ... não disponível" mesmo com UF/ambiente corretos (erro real reproduzido durante o desenvolvimento) |
 | — | `ConfiguracaoServico.DefineVersaoServicosAutomaticamente` | fixado em `false` — na prática, `true` não resolveu a versão do serviço sozinho (erro "versão , não disponível"); foi preciso setar `VersaoNfeStatusServico` explicitamente |
 | — | `ConfiguracaoServico.VersaoNfeStatusServico` | fixado em `VersaoServico.Versao400` (layout 4.00, o vigente) |
+| — | `ConfiguracaoServico.VersaoNFeDistribuicaoDFe` | fixado em `VersaoServico.Versao100` — é o **único** valor cadastrado para esse serviço na tabela de endereços do Zeus.Net (`NFe.Utils/Enderecos/Enderecador.cs`, serviço `NFeDistribuicaoDFe` só existe sob `versao1`/`Versao100`, tanto em homologação quanto produção, para todas as UFs — é um serviço do Ambiente Nacional, não por UF). Sem esse valor explícito (`DefineVersaoServicosAutomaticamente = false` e nenhum valor setado, ou seja, `default(VersaoServico)` = 0) a lib não acha nenhuma URL e lança `Exception("Serviço NFeDistribuicaoDFe, versão , não disponível para a UF ..., no ambiente de ..., para emissão tipo Normal, documento: NF-e!")` — erro real reproduzido durante o desenvolvimento, confirmado lendo o código-fonte oficial do `Enderecador.ObterUrlServico`/`Erro(...)` no GitHub |
+| — | `ConfiguracaoServico.VersaoRecepcaoEventoManifestacaoDestinatario` | fixado em `VersaoServico.Versao400` — a manifestação do destinatário tem endereço cadastrado tanto em `Versao100` (wrapper legado `RecepcaoEvento`) quanto em `Versao400` (wrapper dedicado `RecepcaoEventoManifestacaoDestinatario4AN`, mesmo padrão AN do serviço acima); usamos a versão vigente, mas **também precisa estar setada explicitamente** pelo mesmo motivo — sem ela a manifestação de Ciência da Operação (ver `DISTRIBUICAO_DFE.md`) falharia com o mesmo tipo de erro |
 | — | `ConfiguracaoServico.DiretorioSchemas` / `ValidarSchemas` | lidos de `configuration["SchemasPath"]` (padrão: pasta `SCHEMAS` relativa ao diretório de trabalho da API, mesma convenção do `CertificadosPath`). Se a pasta não existir, `ValidarSchemas` fica `false` automaticamente (funciona sem schemas, só sem validação local) |
 
 Para carregar o certificado é usado
 `DFe.Utils.CertificadoDigitalUtils.ObterDoCaminho(caminho, senha)`, que
 retorna um `X509Certificate2` padrão do .NET (API cross-platform, não depende
 de WinCrypt/Capicom).
+
+## CTe usa uma classe de configuração diferente (`ZeusConfiguracaoFactory.CriarCte`)
+
+`Criar` (acima) monta um `NFe.Utils.ConfiguracaoServico`, usado pelos
+serviços de NFe (`NFe.Servicos.ServicosNFe`). O CTe **não aceita esse
+mesmo tipo** — confirmado por reflexão no construtor de
+`CTe.Servicos.DistribuicaoDFe.ServicoCTeDistribuicaoDFe`, que exige
+`CTe.Classes.ConfiguracaoServico` (classe própria do pacote `Zeus.Net.CTe`,
+sem relação de herança com a de NFe; só compartilham
+`DFe.Utils.ConfiguracaoCertificado` internamente). `CriarCte(empresa,
+diretorioSchemas)` espelha os mesmos campos de `Empresa` mapeados para esse
+segundo tipo (`cUF`, `tpAmb`, `ConfiguracaoCertificado`, `TimeOut`,
+`DiretorioSchemas`/`IsValidaSchemas`), fixando `TipoEmissao =
+CTe.Classes.Informacoes.Tipos.tpEmis.teNormal` e `VersaoLayout =
+CTe.Classes.Servicos.Tipos.versao.ve400` (mesmo raciocínio do `tpEmis`/
+`VersaoNfeStatusServico` fixados para NFe, acima). Usado por
+`DistribuicaoDfeService` — ver
+`AggilleDFe.Infrastructure/Integrations/DISTRIBUICAO_DFE.md`.
 
 ## Campos de `Empresa` SEM correspondência no Zeus.Net
 

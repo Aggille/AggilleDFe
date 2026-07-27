@@ -1,0 +1,48 @@
+name: Build e publica imagens Docker (GHCR)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+env:
+  REGISTRY: ghcr.io
+  # nomes de imagem no GHCR precisam ser minusculos - nao usar
+  # github.repository_owner direto (preserva "Aggille" com maiuscula)
+  IMAGE_NAMESPACE: aggille/aggilledfe
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - service: api
+            dockerfile: AggilleDFe.API/Dockerfile
+          - service: worker
+            dockerfile: AggilleDFe.Worker/Dockerfile
+          - service: web
+            dockerfile: AggilleDFe.Web/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push da imagem ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}-${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}-${{ matrix.service }}:${{ github.sha }}

@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/publish/
+.vs/
+.vscode/
+.git/
+.gitignore
+*.user
+AggilleDFe.Maui/
+home-cards.png
+*.md
