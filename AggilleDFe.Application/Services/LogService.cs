@@ -23,6 +23,7 @@ public class LogService(ILogRepository repository) : ILogService
         QuantidadeXmls = log.QuantidadeXmls,
         Mensagem = log.Mensagem,
         XmlId = log.XmlId,
-        Chave = log.Chave
+        Chave = log.Chave,
+        Nsu = log.Nsu
     };
 }

@@ -18,6 +18,7 @@ Espelha 1:1 os campos da entidade `Log` (ver `AggilleDFe.Domain/Entities/LOG.md`
 - Mensagem: string? — descrição textual do evento ou erro
 - XmlId: int? — id do registro em `XMLS` relacionado, quando aplicável
 - Chave: string? — chave de 44 dígitos da NFe/CTe relacionada, quando aplicável
+- Nsu: int? — NSU da consulta de distribuição DFe que originou o evento (só preenchido nas linhas geradas pelo laço de NFe/CTe do `DistribuicaoDfeService`; nulo nas linhas de `ManifestacaoService`, que não tem NSU em escopo)
 
 ## Filtros da consulta (`GET /api/v1/logs`)
 

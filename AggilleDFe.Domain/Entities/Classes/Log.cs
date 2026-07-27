@@ -11,4 +11,5 @@ public class Log
     public string? Mensagem { get; set; }
     public int? XmlId { get; set; }
     public string? Chave { get; set; }
+    public int? Nsu { get; set; }
 }

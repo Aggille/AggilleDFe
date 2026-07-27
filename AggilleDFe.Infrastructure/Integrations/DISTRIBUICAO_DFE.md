@@ -53,9 +53,14 @@ Cada modelo (NFe/CTe) mantém seu próprio cursor de NSU
    erro 656.
 
 Cada item processado (sucesso ou erro) gera uma linha em `LOGS`
-(`Chave`/`XmlId` preenchidos quando aplicável); ao final de cada laço é
-gravada uma linha de resumo com `QuantidadeXmls` e o intervalo
-`HoraInicio`/`HoraFinal` do laço inteiro.
+(`Chave`/`XmlId` preenchidos quando aplicável, `Nsu` sempre preenchido com o
+NSU do item/consulta que originou o evento); ao final de cada laço é
+gravada uma linha de resumo com `QuantidadeXmls`, o intervalo
+`HoraInicio`/`HoraFinal` do laço inteiro e o `Nsu` (último NSU alcançado,
+igual ao `UltimoNsu`/`UltimoNsuCte` salvo na empresa). As linhas geradas por
+`ManifestacaoService` (manifestação avulsa, fora do laço de distribuição)
+não têm `Nsu` — não há um NSU em escopo nesse fluxo, que é acionado por
+`Chave` diretamente.
 
 ## Mapeamento schema → ação
 

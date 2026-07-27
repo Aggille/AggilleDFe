@@ -87,13 +87,13 @@ public class DistribuicaoDfeService(
 
             if (status.cStat == CStatNenhumDocumentoLocalizado)
             {
-                await LogarAsync(empresa.Id, "NFe: nenhum novo documento localizado na SEFAZ.", cancellationToken: cancellationToken);
+                await LogarAsync(empresa.Id, "NFe: nenhum novo documento localizado na SEFAZ.", nsu: ultNsu, cancellationToken: cancellationToken);
                 break;
             }
 
             if (status.cStat != CStatDocumentosLocalizados)
             {
-                await LogarAsync(empresa.Id, $"NFe: retorno inesperado da SEFAZ (cStat {status.cStat} - {status.xMotivo}).", cancellationToken: cancellationToken);
+                await LogarAsync(empresa.Id, $"NFe: retorno inesperado da SEFAZ (cStat {status.cStat} - {status.xMotivo}).", nsu: ultNsu, cancellationToken: cancellationToken);
                 break;
             }
 
@@ -107,7 +107,7 @@ public class DistribuicaoDfeService(
                 }
                 catch (Exception ex)
                 {
-                    await LogarAsync(empresa.Id, $"NFe: erro ao processar NSU {item.NSU}: {ex.Message}", cancellationToken: cancellationToken);
+                    await LogarAsync(empresa.Id, $"NFe: erro ao processar NSU {item.NSU}: {ex.Message}", nsu: (int)item.NSU, cancellationToken: cancellationToken);
                 }
             }
 
@@ -124,42 +124,44 @@ public class DistribuicaoDfeService(
         }
 
         await LogarAsync(empresa.Id, $"NFe: execução concluída. {baixados} XML(s) baixado(s).",
-            quantidadeXmls: baixados, horaInicio: horaInicio, horaFinal: TimeOnly.FromDateTime(DateTime.Now), cancellationToken: cancellationToken);
+            quantidadeXmls: baixados, horaInicio: horaInicio, horaFinal: TimeOnly.FromDateTime(DateTime.Now), nsu: empresa.UltimoNsu, cancellationToken: cancellationToken);
 
         return (baixados, eventos);
     }
 
     private async Task<(bool NovoXmlBaixado, bool EventoProcessado)> ProcessarItemNfeAsync(Empresa empresa, ServicosNFe servicoNfe, NfeLote item, CancellationToken cancellationToken)
     {
+        var nsu = (int)item.NSU;
+
         if (item.ResNFe is not null)
         {
-            await ProcessarResumoNfeAsync(empresa, servicoNfe, item.ResNFe, cancellationToken);
+            await ProcessarResumoNfeAsync(empresa, servicoNfe, item.ResNFe, nsu, cancellationToken);
             return (false, true);
         }
 
         if (item.ResEvento is not null)
         {
-            await ProcessarResumoEventoNfeAsync(empresa, item.ResEvento, cancellationToken);
+            await ProcessarResumoEventoNfeAsync(empresa, item.ResEvento, nsu, cancellationToken);
             return (false, true);
         }
 
         if (item.NfeProc is not null)
         {
-            await ProcessarDocumentoCompletoNfeAsync(empresa, item, cancellationToken);
+            await ProcessarDocumentoCompletoNfeAsync(empresa, item, nsu, cancellationToken);
             return (true, false);
         }
 
         if (item.ProcEventoNFe is not null)
         {
-            await ProcessarEventoCompletoNfeAsync(empresa, item.ProcEventoNFe, cancellationToken);
+            await ProcessarEventoCompletoNfeAsync(empresa, item.ProcEventoNFe, nsu, cancellationToken);
             return (false, true);
         }
 
-        await LogarAsync(empresa.Id, $"NFe: item NSU {item.NSU} com schema não reconhecido ({item.schema}).", cancellationToken: cancellationToken);
+        await LogarAsync(empresa.Id, $"NFe: item NSU {item.NSU} com schema não reconhecido ({item.schema}).", nsu: nsu, cancellationToken: cancellationToken);
         return (false, false);
     }
 
-    private async Task ProcessarResumoNfeAsync(Empresa empresa, ServicosNFe servicoNfe, NFe.Classes.Servicos.DistribuicaoDFe.Schemas.resNFe resumo, CancellationToken cancellationToken)
+    private async Task ProcessarResumoNfeAsync(Empresa empresa, ServicosNFe servicoNfe, NFe.Classes.Servicos.DistribuicaoDFe.Schemas.resNFe resumo, int? nsu, CancellationToken cancellationToken)
     {
         var xml = await xmlRepository.ObterPorChaveAsync(resumo.chNFe, cancellationToken);
         var novo = xml is null;
@@ -174,7 +176,7 @@ public class DistribuicaoDfeService(
         if (novo) await xmlRepository.IncluirAsync(xml, cancellationToken);
         else await xmlRepository.AtualizarAsync(xml, cancellationToken);
 
-        await LogarAsync(empresa.Id, "NFe: resumo recebido.", chave: xml.Chave, xmlId: xml.Id, cancellationToken: cancellationToken);
+        await LogarAsync(empresa.Id, "NFe: resumo recebido.", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
 
         if (empresa.Manifesta != "S")
         {
@@ -202,15 +204,15 @@ public class DistribuicaoDfeService(
 
             await LogarAsync(empresa.Id,
                 $"NFe: manifestação de Ciência da Operação solicitada (cStat {loteCStat} - {retornoManifestacao.Retorno?.xMotivo}).",
-                chave: xml.Chave, xmlId: xml.Id, cancellationToken: cancellationToken);
+                chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
-            await LogarAsync(empresa.Id, $"NFe: erro ao manifestar ciência: {ex.Message}", chave: resumo.chNFe, xmlId: xml.Id, cancellationToken: cancellationToken);
+            await LogarAsync(empresa.Id, $"NFe: erro ao manifestar ciência: {ex.Message}", chave: resumo.chNFe, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
         }
     }
 
-    private async Task ProcessarResumoEventoNfeAsync(Empresa empresa, NFe.Classes.Servicos.DistribuicaoDFe.Schemas.resEvento evento, CancellationToken cancellationToken)
+    private async Task ProcessarResumoEventoNfeAsync(Empresa empresa, NFe.Classes.Servicos.DistribuicaoDFe.Schemas.resEvento evento, int? nsu, CancellationToken cancellationToken)
     {
         var xml = await xmlRepository.ObterPorChaveAsync(evento.chNFe, cancellationToken);
         var ehCancelamento = evento.tpEvento == TpEventoCancelamento.ToString();
@@ -221,14 +223,14 @@ public class DistribuicaoDfeService(
             xml.DataCancelamento = DateOnly.FromDateTime(DateTime.Now);
             xml.MotivoCancelamento = evento.xEvento;
             await xmlRepository.AtualizarAsync(xml, cancellationToken);
-            await LogarAsync(empresa.Id, "NFe: cancelamento registrado (resumo de evento).", chave: xml.Chave, xmlId: xml.Id, cancellationToken: cancellationToken);
+            await LogarAsync(empresa.Id, "NFe: cancelamento registrado (resumo de evento).", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
             return;
         }
 
-        await LogarAsync(empresa.Id, $"NFe: resumo de evento recebido ({evento.xEvento}).", chave: evento.chNFe, xmlId: xml?.Id, cancellationToken: cancellationToken);
+        await LogarAsync(empresa.Id, $"NFe: resumo de evento recebido ({evento.xEvento}).", chave: evento.chNFe, xmlId: xml?.Id, nsu: nsu, cancellationToken: cancellationToken);
     }
 
-    private async Task ProcessarDocumentoCompletoNfeAsync(Empresa empresa, NfeLote item, CancellationToken cancellationToken)
+    private async Task ProcessarDocumentoCompletoNfeAsync(Empresa empresa, NfeLote item, int? nsu, CancellationToken cancellationToken)
     {
         var doc = item.NfeProc!;
         var infNFe = doc.NFe.infNFe;
@@ -263,10 +265,10 @@ public class DistribuicaoDfeService(
         if (novo) await xmlRepository.IncluirAsync(xml, cancellationToken);
         else await xmlRepository.AtualizarAsync(xml, cancellationToken);
 
-        await LogarAsync(empresa.Id, "NFe: XML baixado e salvo.", chave: xml.Chave, xmlId: xml.Id, cancellationToken: cancellationToken);
+        await LogarAsync(empresa.Id, "NFe: XML baixado e salvo.", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
     }
 
-    private async Task ProcessarEventoCompletoNfeAsync(Empresa empresa, NFe.Classes.Servicos.DistribuicaoDFe.Schemas.procEventoNFe evt, CancellationToken cancellationToken)
+    private async Task ProcessarEventoCompletoNfeAsync(Empresa empresa, NFe.Classes.Servicos.DistribuicaoDFe.Schemas.procEventoNFe evt, int? nsu, CancellationToken cancellationToken)
     {
         var infEvento = evt.retEvento.infEvento;
         var chave = infEvento.chNFe;
@@ -279,11 +281,11 @@ public class DistribuicaoDfeService(
             xml.DataCancelamento = DateOnly.FromDateTime(DateTime.Now);
             xml.MotivoCancelamento = infEvento.xMotivo;
             await xmlRepository.AtualizarAsync(xml, cancellationToken);
-            await LogarAsync(empresa.Id, "NFe: cancelamento registrado (evento completo).", chave: xml.Chave, xmlId: xml.Id, cancellationToken: cancellationToken);
+            await LogarAsync(empresa.Id, "NFe: cancelamento registrado (evento completo).", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
             return;
         }
 
-        await LogarAsync(empresa.Id, $"NFe: evento completo recebido ({infEvento.xEvento}).", chave: chave, xmlId: xml?.Id, cancellationToken: cancellationToken);
+        await LogarAsync(empresa.Id, $"NFe: evento completo recebido ({infEvento.xEvento}).", chave: chave, xmlId: xml?.Id, nsu: nsu, cancellationToken: cancellationToken);
     }
 
     // ----------------------------------------------------------------------------
@@ -308,13 +310,13 @@ public class DistribuicaoDfeService(
 
             if (status.cStat == CStatNenhumDocumentoLocalizado)
             {
-                await LogarAsync(empresa.Id, "CTe: nenhum novo documento localizado na SEFAZ.", cancellationToken: cancellationToken);
+                await LogarAsync(empresa.Id, "CTe: nenhum novo documento localizado na SEFAZ.", nsu: ultNsu, cancellationToken: cancellationToken);
                 break;
             }
 
             if (status.cStat != CStatDocumentosLocalizados)
             {
-                await LogarAsync(empresa.Id, $"CTe: retorno inesperado da SEFAZ (cStat {status.cStat} - {status.xMotivo}).", cancellationToken: cancellationToken);
+                await LogarAsync(empresa.Id, $"CTe: retorno inesperado da SEFAZ (cStat {status.cStat} - {status.xMotivo}).", nsu: ultNsu, cancellationToken: cancellationToken);
                 break;
             }
 
@@ -328,7 +330,7 @@ public class DistribuicaoDfeService(
                 }
                 catch (Exception ex)
                 {
-                    await LogarAsync(empresa.Id, $"CTe: erro ao processar NSU {item.NSU}: {ex.Message}", cancellationToken: cancellationToken);
+                    await LogarAsync(empresa.Id, $"CTe: erro ao processar NSU {item.NSU}: {ex.Message}", nsu: (int)item.NSU, cancellationToken: cancellationToken);
                 }
             }
 
@@ -345,16 +347,18 @@ public class DistribuicaoDfeService(
         }
 
         await LogarAsync(empresa.Id, $"CTe: execução concluída. {baixados} XML(s) baixado(s).",
-            quantidadeXmls: baixados, horaInicio: horaInicio, horaFinal: TimeOnly.FromDateTime(DateTime.Now), cancellationToken: cancellationToken);
+            quantidadeXmls: baixados, horaInicio: horaInicio, horaFinal: TimeOnly.FromDateTime(DateTime.Now), nsu: empresa.UltimoNsuCte, cancellationToken: cancellationToken);
 
         return (baixados, eventos);
     }
 
     private async Task<(bool NovoXmlBaixado, bool EventoProcessado)> ProcessarItemCteAsync(Empresa empresa, CteLote item, CancellationToken cancellationToken)
     {
+        var nsu = (int)item.NSU;
+
         if (item.XmlNfe is null)
         {
-            await LogarAsync(empresa.Id, $"CTe: item NSU {item.NSU} sem conteúdo.", cancellationToken: cancellationToken);
+            await LogarAsync(empresa.Id, $"CTe: item NSU {item.NSU} sem conteúdo.", nsu: nsu, cancellationToken: cancellationToken);
             return (false, false);
         }
 
@@ -362,21 +366,21 @@ public class DistribuicaoDfeService(
 
         if (conteudo.StartsWith("<cteProc", StringComparison.Ordinal))
         {
-            await ProcessarDocumentoCompletoCteAsync(empresa, item.schema, conteudo, cancellationToken);
+            await ProcessarDocumentoCompletoCteAsync(empresa, item.schema, conteudo, nsu, cancellationToken);
             return (true, false);
         }
 
         if (conteudo.StartsWith("<procEventoCTe", StringComparison.Ordinal))
         {
-            await ProcessarEventoCompletoCteAsync(empresa, conteudo, cancellationToken);
+            await ProcessarEventoCompletoCteAsync(empresa, conteudo, nsu, cancellationToken);
             return (false, true);
         }
 
-        await ProcessarResumoGenericoCteAsync(empresa, item.schema, conteudo, cancellationToken);
+        await ProcessarResumoGenericoCteAsync(empresa, item.schema, conteudo, nsu, cancellationToken);
         return (false, true);
     }
 
-    private async Task ProcessarDocumentoCompletoCteAsync(Empresa empresa, string schema, string conteudoXml, CancellationToken cancellationToken)
+    private async Task ProcessarDocumentoCompletoCteAsync(Empresa empresa, string schema, string conteudoXml, int? nsu, CancellationToken cancellationToken)
     {
         var doc = FuncoesXml.XmlStringParaClasse<CTe.Classes.cteProc>(conteudoXml);
         var infCte = doc.CTe.infCte;
@@ -409,10 +413,10 @@ public class DistribuicaoDfeService(
         if (novo) await xmlRepository.IncluirAsync(xml, cancellationToken);
         else await xmlRepository.AtualizarAsync(xml, cancellationToken);
 
-        await LogarAsync(empresa.Id, "CTe: XML baixado e salvo.", chave: xml.Chave, xmlId: xml.Id, cancellationToken: cancellationToken);
+        await LogarAsync(empresa.Id, "CTe: XML baixado e salvo.", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
     }
 
-    private async Task ProcessarEventoCompletoCteAsync(Empresa empresa, string conteudoXml, CancellationToken cancellationToken)
+    private async Task ProcessarEventoCompletoCteAsync(Empresa empresa, string conteudoXml, int? nsu, CancellationToken cancellationToken)
     {
         var evt = FuncoesXml.XmlStringParaClasse<CTe.Classes.Servicos.DistribuicaoDFe.Schemas.procEventoCTe>(conteudoXml);
         var chave = evt.eventoCTe.infEvento.chCTe;
@@ -426,11 +430,11 @@ public class DistribuicaoDfeService(
             xml.DataCancelamento = DateOnly.FromDateTime(DateTime.Now);
             xml.MotivoCancelamento = infEvento.xMotivo;
             await xmlRepository.AtualizarAsync(xml, cancellationToken);
-            await LogarAsync(empresa.Id, "CTe: cancelamento registrado (evento completo).", chave: xml.Chave, xmlId: xml.Id, cancellationToken: cancellationToken);
+            await LogarAsync(empresa.Id, "CTe: cancelamento registrado (evento completo).", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
             return;
         }
 
-        await LogarAsync(empresa.Id, $"CTe: evento completo recebido ({infEvento.xEvento}).", chave: chave, xmlId: xml?.Id, cancellationToken: cancellationToken);
+        await LogarAsync(empresa.Id, $"CTe: evento completo recebido ({infEvento.xEvento}).", chave: chave, xmlId: xml?.Id, nsu: nsu, cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -439,7 +443,7 @@ public class DistribuicaoDfeService(
     /// evento completo (procEventoCTe). Decisão confirmada com o usuário: registrar um
     /// XML com dados mínimos (via parsing genérico) e logar, sem manifestação automática.
     /// </summary>
-    private async Task ProcessarResumoGenericoCteAsync(Empresa empresa, string schema, string conteudoXml, CancellationToken cancellationToken)
+    private async Task ProcessarResumoGenericoCteAsync(Empresa empresa, string schema, string conteudoXml, int? nsu, CancellationToken cancellationToken)
     {
         string? chave = null;
         try
@@ -463,7 +467,7 @@ public class DistribuicaoDfeService(
         if (novo) await xmlRepository.IncluirAsync(xml, cancellationToken);
         else await xmlRepository.AtualizarAsync(xml, cancellationToken);
 
-        await LogarAsync(empresa.Id, $"CTe: resumo recebido com schema não tipado ({schema}).", chave: xml.Chave, xmlId: xml.Id, cancellationToken: cancellationToken);
+        await LogarAsync(empresa.Id, $"CTe: resumo recebido com schema não tipado ({schema}).", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
     }
 
     // ----------------------------------------------------------------------------
@@ -493,6 +497,7 @@ public class DistribuicaoDfeService(
         int? quantidadeXmls = null,
         TimeOnly? horaInicio = null,
         TimeOnly? horaFinal = null,
+        int? nsu = null,
         CancellationToken cancellationToken = default)
     {
         var agora = TimeOnly.FromDateTime(DateTime.Now);
@@ -505,7 +510,8 @@ public class DistribuicaoDfeService(
             Mensagem = mensagem,
             Chave = chave,
             XmlId = xmlId,
-            QuantidadeXmls = quantidadeXmls
+            QuantidadeXmls = quantidadeXmls,
+            Nsu = nsu
         }, cancellationToken);
     }
 }
