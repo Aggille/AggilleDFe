@@ -61,10 +61,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwaggerDocumentation();
-}
+app.UseSwaggerDocumentation();
 
 app.UseHttpsRedirection();
 app.UseCors(webClientCorsPolicy);
