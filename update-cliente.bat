@@ -15,7 +15,19 @@ set USUARIO=root
 set PASTA_REMOTA=/opt/aggilledfe/docker
 
 echo.
-echo Conectando em %USUARIO%@%SERVIDOR% (vai pedir a senha)...
+echo Copiando docker-compose.prod.yml atualizado para %USUARIO%@%SERVIDOR% (vai pedir a senha)...
+echo.
+
+scp docker-compose.prod.yml %USUARIO%@%SERVIDOR%:%PASTA_REMOTA%/docker-compose.prod.yml
+if errorlevel 1 (
+    echo.
+    echo [ERRO] Falha ao copiar docker-compose.prod.yml - veja a mensagem acima.
+    pause
+    exit /b 1
+)
+
+echo.
+echo Conectando em %USUARIO%@%SERVIDOR% (vai pedir a senha de novo)...
 echo Atualizando AggilleDFe em %PASTA_REMOTA%...
 echo.
 
