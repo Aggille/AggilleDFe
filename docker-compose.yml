@@ -4,6 +4,7 @@ services:
   db:
     image: postgres:16-alpine
     environment:
+      TZ: America/Sao_Paulo
       POSTGRES_DB: aggilledfe
       POSTGRES_USER: aggilledfe
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no arquivo .env (ver .env.example)}
@@ -30,6 +31,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      TZ: America/Sao_Paulo
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=aggilledfe;Username=aggilledfe;Password=${POSTGRES_PASSWORD}
       WebClientOrigins__0: ${WEB_PUBLIC_URL:-http://localhost:8080}
@@ -65,6 +67,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      TZ: America/Sao_Paulo
       DOTNET_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=aggilledfe;Username=aggilledfe;Password=${POSTGRES_PASSWORD}
     volumes:
