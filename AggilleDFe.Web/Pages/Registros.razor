@@ -23,7 +23,10 @@
         </MudButton>
     </MudStack>
 
-    <MudDataGrid Items="_logs" Loading="_carregando" SortMode="SortMode.None">
+    <MudDataGrid Items="_logs" Loading="_carregando" SortMode="SortMode.None" RowsPerPage="25">
+        <PagerContent>
+            <MudDataGridPager T="LogDto" />
+        </PagerContent>
         <Columns>
             <TemplateColumn Title="Data">
                 <CellTemplate>@(context.Item.Data?.ToString("dd/MM/yyyy"))</CellTemplate>
