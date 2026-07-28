@@ -67,6 +67,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.UltimoNsuCte).HasColumnName("ULTIMO_NSU_CTE");
             e.Property(x => x.HoraInicial).HasColumnName("HORA_INICIAL");
             e.Property(x => x.HoraFinal).HasColumnName("HORA_FINAL");
+            e.Property(x => x.BloqueadaAte).HasColumnName("BLOQUEADA_ATE").HasColumnType("timestamp without time zone");
+            e.Property(x => x.CertificadoNotificadoEm).HasColumnName("CERTIFICADO_NOTIFICADO_EM");
         });
 
         modelBuilder.Entity<Log>(e =>

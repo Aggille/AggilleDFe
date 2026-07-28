@@ -21,10 +21,19 @@ public class DistribuicaoLoteService(
         var agora = DateTime.Now;
 
         var empresasAtivas = todasEmpresas.Where(e => e.Inativo != "S").ToList();
-        var empresasElegiveis = empresasAtivas
+
+        var empresasBloqueadas = empresasAtivas.Where(e => e.BloqueadaAte > agora).ToList();
+        foreach (var empresa in empresasBloqueadas)
+        {
+            await LogarEmpresaNaoProcessadaAsync(empresa, cancellationToken,
+                $"bloqueada por consumo indevido até {empresa.BloqueadaAte:dd/MM/yyyy HH:mm}");
+        }
+
+        var empresasDisponiveis = empresasAtivas.Except(empresasBloqueadas).ToList();
+        var empresasElegiveis = empresasDisponiveis
             .Where(e => JanelaExecucaoService.PodeExecutar(e, agora, execucaoManual))
             .ToList();
-        var empresasForaDaJanela = empresasAtivas.Except(empresasElegiveis).ToList();
+        var empresasForaDaJanela = empresasDisponiveis.Except(empresasElegiveis).ToList();
 
         foreach (var empresa in empresasForaDaJanela)
         {
@@ -99,7 +108,7 @@ public class DistribuicaoLoteService(
         };
     }
 
-    private async Task LogarEmpresaNaoProcessadaAsync(Empresa empresa, CancellationToken cancellationToken)
+    private async Task LogarEmpresaNaoProcessadaAsync(Empresa empresa, CancellationToken cancellationToken, string? motivo = null)
     {
         var agora = TimeOnly.FromDateTime(DateTime.Now);
         await logRepository.IncluirAsync(new Log
@@ -108,7 +117,7 @@ public class DistribuicaoLoteService(
             HoraInicio = agora,
             HoraFinal = agora,
             EmpresaId = empresa.Id,
-            Mensagem = "Empresa não processada"
+            Mensagem = motivo is null ? "Empresa não processada" : $"Empresa não processada ({motivo})"
         }, cancellationToken);
     }
 }

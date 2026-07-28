@@ -44,8 +44,10 @@ Cada modelo (NFe/CTe) mantém seu próprio cursor de NSU
    (lotes de até 50 registros, conforme o manual da SEFAZ), atualiza
    `Empresa.UltimoNsu(Cte)` para `status.ultNSU` e persiste **a cada lote**
    (não só no fim — evita perder progresso se uma chamada seguinte falhar).
-4. Qualquer outro `cStat` (ex.: 656 "Consumo Indevido") → loga o erro e para
-   o laço, sem lançar exceção (evita loop infinito em cenário de erro).
+4. Qualquer outro `cStat` → loga o erro e para o laço, sem lançar exceção
+   (evita loop infinito em cenário de erro). Se for especificamente `656`
+   ("Consumo Indevido"), também bloqueia a empresa por 1h e notifica por
+   e-mail — ver seção "Notificações por e-mail" abaixo.
 5. Se `status.ultNSU >= status.maxNSU`, não há NSU novo além do lote atual →
    para. Senão continua com `ultNSU = status.ultNSU` e uma pequena espera
    (1,5s) entre chamadas, mesma cautela adotada no app de exemplo oficial do
@@ -67,6 +69,34 @@ laço inteiro e o `Nsu` (último NSU alcançado, igual ao
 `ManifestacaoService` (manifestação avulsa, fora do laço de distribuição)
 não têm `Nsu` — não há um NSU em escopo nesse fluxo, que é acionado por
 `Chave` diretamente.
+
+## Notificações por e-mail (`IEmailNotificacaoService`)
+
+`EmailNotificacaoService` (`AggilleDFe.Infrastructure/Integrations/EmailNotificacaoService.cs`)
+envia e-mail via `System.Net.Mail.SmtpClient`, usando o SMTP cadastrado na
+própria `Empresa` (`ServidorSmtp`/`PortaSmtp`/`UsuarioSmtp`/`SenhaSmtp`) para
+`Empresa.EmailEnvioNotificacoes`. Se algum desses dois últimos campos estiver
+vazio, não envia nada (silencioso — notificação é opcional, não é erro). Falha
+de envio é logada (`ILogger`) mas nunca lança exceção — não pode derrubar o
+fluxo principal de distribuição. `DistribuicaoDfeService.ExecutarAsync`
+dispara três situações **(decisão confirmada com o usuário — só essas três,
+nenhuma outra situação notifica)**:
+
+1. **NFe/CTe baixados**: ao final de `ExecutarAsync`, se
+   `baixadosNfe + baixadosCte > 0`, envia um e-mail avisando quantos XMLs
+   foram baixados. Ciclos sem nenhum XML novo (a maioria, no dia a dia) não
+   notificam.
+2. **Bloqueio por consumo indevido**: quando o laço de NFe ou CTe recebe
+   `cStat 656` (ver `BloquearPorConsumoIndevidoAsync`), marca
+   `Empresa.BloqueadaAte = DateTime.Now.AddHours(1)` (impede novas tentativas
+   dessa empresa até lá — ver `DISTRIBUICAO_LOTE.md`) e envia e-mail avisando
+   do bloqueio e até quando.
+3. **Certificado digital vencendo/vencido**: logo após carregar o certificado
+   (`VerificarValidadeCertificadoAsync`), se faltarem 15 dias ou menos para
+   `X509Certificate2.NotAfter` (ou já tiver vencido), loga e envia e-mail.
+   Para não notificar em todo ciclo, só reenvia se `Empresa.CertificadoNotificadoEm`
+   ainda não é a data de hoje (persistido após o envio) — ou seja, no máximo
+   um e-mail de aviso de certificado por empresa por dia.
 
 ## Mapeamento schema → ação
 

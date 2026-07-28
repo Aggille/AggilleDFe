@@ -36,7 +36,9 @@
 - INATIVO VARCHAR(1),
 - ULTIMO_NSU_CTE INTEGER,
 - HORA_INICIAL TIME,
-- HORA_FINAL TIME
+- HORA_FINAL TIME,
+- BLOQUEADA_ATE TIMESTAMP,
+- CERTIFICADO_NOTIFICADO_EM DATE
 
 - HORA_INICIAL/HORA_FINAL: janela de horário em que o Worker pode baixar os
   XMLs dessa empresa automaticamente. Se ambos estiverem preenchidos, o
@@ -44,6 +46,13 @@
   se algum estiver vazio, não há restrição. Execução manual (ex.: botão
   "Baixar XMLs" na tela de Empresas) sempre ignora essa janela. Ver
   `AggilleDFe.Application/Services/JANELA_EXECUCAO.md`.
+- BLOQUEADA_ATE: preenchido automaticamente quando a SEFAZ rejeita a
+  distribuição com cStat 656 ("Consumo Indevido") — a empresa fica de fora
+  de qualquer execução (automática ou manual em lote) até esse instante.
+  Não editável na tela; ver `DISTRIBUICAO_DFE.md` e `DISTRIBUICAO_LOTE.md`.
+- CERTIFICADO_NOTIFICADO_EM: data em que a última notificação de "certificado
+  próximo do vencimento" foi enviada, pra não reenviar o e-mail em todo
+  ciclo. Não editável na tela. Ver `DISTRIBUICAO_DFE.md`.
 
 # Observações
 

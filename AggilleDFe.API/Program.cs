@@ -51,6 +51,8 @@ builder.Services.AddScoped<IManifestacaoService, ManifestacaoService>();
 builder.Services.AddScoped<IDanfeService, DanfeService>();
 builder.Services.AddScoped<IDacteService, DacteService>();
 builder.Services.AddScoped<IXmlImportService, XmlImportService>();
+builder.Services.AddScoped<IEmailNotificacaoService, EmailNotificacaoService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddHttpClient<ICnpjConsultaService, CnpjWsConsultaService>(client =>
 {
     client.BaseAddress = new Uri("https://publica.cnpj.ws/");
@@ -74,5 +76,6 @@ app.MapEmpresaEndpoints();
 app.MapLogEndpoints();
 app.MapXmlEndpoints();
 app.MapDfeEndpoints();
+app.MapDashboardEndpoints();
 
 app.Run();

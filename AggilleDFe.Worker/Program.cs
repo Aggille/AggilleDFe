@@ -18,6 +18,7 @@ builder.Services.AddScoped<IConfiguracaoRepository, ConfiguracaoRepository>();
 builder.Services.AddScoped<IEmpresaRepository, EmpresaRepository>();
 builder.Services.AddScoped<IXmlRepository, XmlRepository>();
 builder.Services.AddScoped<ILogRepository, LogRepository>();
+builder.Services.AddScoped<IEmailNotificacaoService, EmailNotificacaoService>();
 builder.Services.AddScoped<IDistribuicaoDfeService, DistribuicaoDfeService>();
 builder.Services.AddScoped<IDistribuicaoLoteService, DistribuicaoLoteService>();
 builder.Services.AddHostedService<Worker>();

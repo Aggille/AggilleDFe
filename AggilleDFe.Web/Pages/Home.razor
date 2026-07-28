@@ -1,5 +1,7 @@
 @page "/"
+@using AggilleDFe.Application.DTOs
 @inject NavigationManager Nav
+@inject HttpClient Http
 
 <PageTitle>AggilleDFe</PageTitle>
 
@@ -7,6 +9,93 @@
     <MudImage Src="images/background.png" Alt="Aggille" Width="320" ObjectFit="ObjectFit.Contain" />
     <MudText Typo="Typo.h5" Class="mt-2">AggilleDFe - Gerenciador de Documentos Fiscais</MudText>
 </MudStack>
+
+@if (_dashboard is not null)
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.body2">Empresas Ativas</MudText>
+                <MudText Typo="Typo.h4">@_dashboard.EmpresasAtivas</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.body2">Bloqueadas (Consumo Indevido)</MudText>
+                <MudText Typo="Typo.h4" Color="@(_dashboard.EmpresasBloqueadas > 0 ? Color.Error : Color.Default)">@_dashboard.EmpresasBloqueadas</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.body2">Certificados Vencendo (15 dias)</MudText>
+                <MudText Typo="Typo.h4" Color="@(_dashboard.CertificadosVencendoEm15Dias > 0 ? Color.Warning : Color.Default)">@_dashboard.CertificadosVencendoEm15Dias</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudText Typo="Typo.body2">Erros Hoje</MudText>
+                <MudText Typo="Typo.h4" Color="@(_dashboard.ErrosHoje > 0 ? Color.Error : Color.Default)">@_dashboard.ErrosHoje</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    @if (_dashboard.Empresas.Count > 0)
+    {
+        <MudPaper Class="pa-4 mb-6" Elevation="1">
+            <MudText Typo="Typo.h6" Class="mb-2">Empresas</MudText>
+            <MudSimpleTable Dense="true" Hover="true">
+                <thead>
+                    <tr>
+                        <th>Empresa</th>
+                        <th>Última Execução (hoje)</th>
+                        <th>Situação</th>
+                        <th>Certificado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var empresa in _dashboard.Empresas)
+                    {
+                        <tr>
+                            <td>@empresa.RazaoSocial</td>
+                            <td>@(empresa.UltimaExecucaoHora?.ToString("HH:mm:ss") ?? "—")</td>
+                            <td>
+                                @if (empresa.Bloqueada)
+                                {
+                                    <MudChip T="string" Color="Color.Error" Size="Size.Small">Bloqueada até @(empresa.BloqueadaAte?.ToString("dd/MM HH:mm"))</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small">OK</MudChip>
+                                }
+                            </td>
+                            <td>
+                                @if (empresa.CertificadoDiasRestantes is int dias)
+                                {
+                                    @if (dias < 0)
+                                    {
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small">Vencido</MudChip>
+                                    }
+                                    else if (dias <= 15)
+                                    {
+                                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">Vence em @dias dia(s)</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2">@dias dia(s)</MudText>
+                                    }
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2">—</MudText>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        </MudPaper>
+    }
+}
 
 <MudGrid>
     <MudItem xs="12" sm="6" md="4">
@@ -37,3 +126,20 @@
         </MudCard>
     </MudItem>
 </MudGrid>
+
+@code {
+    private DashboardDto? _dashboard;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _dashboard = await Http.GetFromJsonAsync<DashboardDto>("api/v1/dashboard");
+        }
+        catch (HttpRequestException)
+        {
+            // Resumo é só informativo - se a API estiver fora, a Home continua
+            // funcional (sem os cards de resumo), sem precisar de Snackbar de erro.
+        }
+    }
+}

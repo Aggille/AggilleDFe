@@ -35,4 +35,6 @@ public class Empresa
     public int? UltimoNsuCte { get; set; }
     public TimeOnly? HoraInicial { get; set; }
     public TimeOnly? HoraFinal { get; set; }
+    public DateTime? BloqueadaAte { get; set; }
+    public DateOnly? CertificadoNotificadoEm { get; set; }
 }

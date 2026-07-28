@@ -20,12 +20,15 @@ public class DistribuicaoDfeService(
     IEmpresaRepository empresaRepository,
     IXmlRepository xmlRepository,
     ILogRepository logRepository,
+    IEmailNotificacaoService emailNotificacaoService,
     IConfiguration configuration) : IDistribuicaoDfeService
 {
     private const int CStatDocumentosLocalizados = 138;
     private const int CStatNenhumDocumentoLocalizado = 137;
     private const int CStatLoteEventoProcessado = 128;
+    private const int CStatConsumoIndevido = 656;
     private const int TpEventoCancelamento = 110111;
+    private const int DiasAvisoVencimentoCertificado = 15;
 
     public async Task<(ResultadoBaixarXmlsDto? Resultado, string? Erro)> ExecutarAsync(int empresaId, bool execucaoManual, CancellationToken cancellationToken = default)
     {
@@ -38,12 +41,22 @@ public class DistribuicaoDfeService(
         try
         {
             var certificado = ZeusConfiguracaoFactory.CarregarCertificado(empresa);
+            await VerificarValidadeCertificadoAsync(empresa, certificado, cancellationToken);
+
             var diretorioSchemas = configuration["SchemasPath"] ?? "SCHEMAS";
             var configuracaoNfe = ZeusConfiguracaoFactory.Criar(empresa, diretorioSchemas);
             var configuracaoCte = ZeusConfiguracaoFactory.CriarCte(empresa, diretorioSchemas);
 
             var (baixadosNfe, eventosNfe) = await ExecutarNfeAsync(empresa, configuracaoNfe, certificado, cancellationToken);
             var (baixadosCte, eventosCte) = await ExecutarCteAsync(empresa, configuracaoCte, certificado, cancellationToken);
+
+            if (baixadosNfe + baixadosCte > 0)
+            {
+                await emailNotificacaoService.EnviarAsync(empresa,
+                    $"AggilleDFe: novos documentos baixados - {empresa.RazaoSocial}",
+                    $"{baixadosNfe} XML(s) de NFe e {baixadosCte} XML(s) de CTe foram baixados para \"{empresa.RazaoSocial}\".",
+                    cancellationToken);
+            }
 
             return (new ResultadoBaixarXmlsDto
             {
@@ -63,6 +76,44 @@ public class DistribuicaoDfeService(
             await LogarAsync(empresa.Id, $"Falha ao baixar XMLs: {ex.Message}", cancellationToken: cancellationToken);
             return (null, $"Falha ao baixar XMLs: {ex.Message}");
         }
+    }
+
+    private async Task VerificarValidadeCertificadoAsync(Empresa empresa, X509Certificate2 certificado, CancellationToken cancellationToken)
+    {
+        var diasRestantes = (certificado.NotAfter.Date - DateTime.Now.Date).Days;
+        if (diasRestantes > DiasAvisoVencimentoCertificado)
+        {
+            return;
+        }
+
+        var hoje = DateOnly.FromDateTime(DateTime.Now);
+        if (empresa.CertificadoNotificadoEm == hoje)
+        {
+            return;
+        }
+
+        var mensagem = diasRestantes >= 0
+            ? $"O certificado digital da empresa \"{empresa.RazaoSocial}\" vence em {diasRestantes} dia(s), em {certificado.NotAfter:dd/MM/yyyy}."
+            : $"O certificado digital da empresa \"{empresa.RazaoSocial}\" está VENCIDO desde {certificado.NotAfter:dd/MM/yyyy}.";
+
+        await LogarAsync(empresa.Id, mensagem, cancellationToken: cancellationToken);
+        await emailNotificacaoService.EnviarAsync(empresa, $"AggilleDFe: certificado digital de {empresa.RazaoSocial}", mensagem, cancellationToken);
+
+        empresa.CertificadoNotificadoEm = hoje;
+        await empresaRepository.AtualizarAsync(empresa, cancellationToken);
+    }
+
+    private async Task BloquearPorConsumoIndevidoAsync(Empresa empresa, CancellationToken cancellationToken)
+    {
+        empresa.BloqueadaAte = DateTime.Now.AddHours(1);
+        await empresaRepository.AtualizarAsync(empresa, cancellationToken);
+
+        await emailNotificacaoService.EnviarAsync(empresa,
+            $"AggilleDFe: {empresa.RazaoSocial} bloqueada por consumo indevido",
+            $"A SEFAZ rejeitou a distribuição de documentos para \"{empresa.RazaoSocial}\" com o motivo " +
+            $"\"Consumo Indevido\" (cStat 656). A empresa ficará fora das próximas execuções até " +
+            $"{empresa.BloqueadaAte:dd/MM/yyyy HH:mm}.",
+            cancellationToken);
     }
 
     // ----------------------------------------------------------------------------
@@ -93,6 +144,10 @@ public class DistribuicaoDfeService(
             if (status.cStat != CStatDocumentosLocalizados)
             {
                 await LogarAsync(empresa.Id, $"NFe: retorno inesperado da SEFAZ (cStat {status.cStat} - {status.xMotivo}).", nsu: ultNsu, cancellationToken: cancellationToken);
+                if (status.cStat == CStatConsumoIndevido)
+                {
+                    await BloquearPorConsumoIndevidoAsync(empresa, cancellationToken);
+                }
                 break;
             }
 
@@ -328,6 +383,10 @@ public class DistribuicaoDfeService(
             if (status.cStat != CStatDocumentosLocalizados)
             {
                 await LogarAsync(empresa.Id, $"CTe: retorno inesperado da SEFAZ (cStat {status.cStat} - {status.xMotivo}).", nsu: ultNsu, cancellationToken: cancellationToken);
+                if (status.cStat == CStatConsumoIndevido)
+                {
+                    await BloquearPorConsumoIndevidoAsync(empresa, cancellationToken);
+                }
                 break;
             }
 

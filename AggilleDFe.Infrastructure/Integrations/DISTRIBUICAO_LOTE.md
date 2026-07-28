@@ -21,17 +21,19 @@ algoritmo sem divergir.
 ## Algoritmo
 
 1. Lê `Configuracao` (para `ProcessarIndividualmente`) e todas as empresas.
-2. Filtra `Empresa.Inativo != "S"` (empresas ativas) e, dentro dessas,
-   separa as elegíveis via
+2. Filtra `Empresa.Inativo != "S"` (empresas ativas). Dentro dessas, separa
+   primeiro as **bloqueadas por consumo indevido**
+   (`Empresa.BloqueadaAte > DateTime.Now` — ver `DISTRIBUICAO_DFE.md`,
+   cStat 656) e, das restantes, as elegíveis via
    `JanelaExecucaoService.PodeExecutar(empresa, DateTime.Now, execucaoManual)`.
-3. Empresas ativas que ficaram fora da janela (`PodeExecutar` retornou
-   `false` — só acontece com `execucaoManual: false`, ou seja, no ciclo
-   automático do Worker) geram um registro em `LOGS` com mensagem
-   `"Empresa não processada"` (sem chave, sem quantidade de XMLs) — dá
-   rastreabilidade de que a empresa foi avaliada no ciclo e propositalmente
-   pulada, em vez de ficar silenciosa na tela de Registros. Empresas
-   inativas (`Inativo == "S"`) não geram log nenhum — são ignoradas por
-   completo, não "puladas".
+3. Empresas ativas que ficaram de fora — por bloqueio ou por estarem fora da
+   janela (`PodeExecutar` retornou `false`, só acontece com
+   `execucaoManual: false`, ou seja, no ciclo automático do Worker) — geram
+   um registro em `LOGS` com mensagem `"Empresa não processada"` (com o
+   motivo entre parênteses quando é bloqueio) — dá rastreabilidade de que a
+   empresa foi avaliada e propositalmente pulada, em vez de ficar silenciosa
+   na tela de Registros. Empresas inativas (`Inativo == "S"`) não geram log
+   nenhum — são ignoradas por completo, não "puladas".
 4. Conforme `Configuracao.ProcessarIndividualmente` (rótulo na tela de
    Configuração: "Processar uma empresa de cada vez"):
    - `"S"` → **rodízio**, vale tanto pro ciclo automático do Worker quanto
