@@ -13,29 +13,29 @@
 <MudText Typo="Typo.h4" Class="mb-4">XMLS Baixados</MudText>
 
 <MudPaper Class="pa-4" Elevation="1">
-    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mb-4" AlignItems="AlignItems.End">
-        <MudSelect T="int?" @bind-Value="_empresaId" Label="Empresa" Variant="Variant.Outlined" Style="width: 280px" Clearable="true">
+    <div class="mb-4" style="display: grid; grid-template-columns: minmax(200px, 1fr) minmax(160px, 1fr) 180px 180px 180px 180px minmax(200px, 1fr) auto; gap: 16px; align-items: end;">
+        <MudSelect T="int?" @bind-Value="_empresaId" Label="Empresa" Variant="Variant.Outlined" Clearable="true">
             <MudSelectItem T="int?" Value="null">Todas as empresas</MudSelectItem>
             @foreach (var empresa in _empresas)
             {
                 <MudSelectItem T="int?" Value="empresa.Id">@empresa.RazaoSocial</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect T="string?" @bind-Value="_modelo" Label="Tipo de Documento" Variant="Variant.Outlined" Style="width: 200px" Clearable="true">
+        <MudSelect T="string?" @bind-Value="_modelo" Label="Tipo de Documento" Variant="Variant.Outlined" Clearable="true">
             <MudSelectItem T="string?" Value="null">Todos</MudSelectItem>
             <MudSelectItem T="string?" Value="@("55")">NFe</MudSelectItem>
             <MudSelectItem T="string?" Value="@("57")">CTe</MudSelectItem>
         </MudSelect>
-        <MudDatePicker @bind-Date="DataInicialProxy" Label="Baixado de" Variant="Variant.Outlined" Style="width: 180px" Editable="true" />
-        <MudDatePicker @bind-Date="DataFinalProxy" Label="Baixado até" Variant="Variant.Outlined" Style="width: 180px" Editable="true" />
-        <MudDatePicker @bind-Date="EmissaoInicialProxy" Label="Emissão de" Variant="Variant.Outlined" Style="width: 180px" Editable="true" Clearable="true" />
-        <MudDatePicker @bind-Date="EmissaoFinalProxy" Label="Emissão até" Variant="Variant.Outlined" Style="width: 180px" Editable="true" Clearable="true" />
-        <MudTextField @bind-Value="_fornecedor" Label="Fornecedor" Variant="Variant.Outlined" Style="width: 240px" Immediate="true"
+        <MudDatePicker @bind-Date="DataInicialProxy" Label="Baixado de" Variant="Variant.Outlined" Editable="true" />
+        <MudDatePicker @bind-Date="DataFinalProxy" Label="Baixado até" Variant="Variant.Outlined" Editable="true" />
+        <MudDatePicker @bind-Date="EmissaoInicialProxy" Label="Emissão de" Variant="Variant.Outlined" Editable="true" Clearable="true" />
+        <MudDatePicker @bind-Date="EmissaoFinalProxy" Label="Emissão até" Variant="Variant.Outlined" Editable="true" Clearable="true" />
+        <MudTextField @bind-Value="_fornecedor" Label="Fornecedor" Variant="Variant.Outlined" Immediate="true"
                       OnKeyDown="@(e => { if (e.Key == "Enter") { _ = Pesquisar(); } })" />
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="Pesquisar" Disabled="_carregando">
             Pesquisar
         </MudButton>
-    </MudStack>
+    </div>
 
     <MudDataGrid Items="_xmls" Loading="_carregando" SortMode="SortMode.None" RowsPerPage="25">
         <PagerContent>
@@ -76,24 +76,35 @@
             </TemplateColumn>
             <TemplateColumn Title="Ações" Sortable="false">
                 <CellTemplate>
-                    <MudTooltip Text="Baixar XML">
-                        <MudIconButton Icon="@Icons.Material.Filled.CloudDownload" Size="Size.Small" OnClick="@(() => BaixarXml(context.Item))" />
-                    </MudTooltip>
-                    @if (context.Item.Modelo == "55")
-                    {
-                        <MudTooltip Text="Ver DANFE">
-                            <MudIconButton Icon="@Icons.Material.Filled.Receipt" Size="Size.Small" OnClick="@(() => VerDanfeAsync(context.Item))" />
+                    <div style="display: flex; flex-wrap: nowrap; white-space: nowrap;">
+                        <MudTooltip Text="Baixar XML">
+                            <MudIconButton Icon="@Icons.Material.Filled.CloudDownload" Size="Size.Small" OnClick="@(() => BaixarXml(context.Item))" />
                         </MudTooltip>
-                        <MudTooltip Text="Ciência da Operação">
-                            <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" OnClick="@(() => ManifestarCienciaAsync(context.Item))" />
+                        <MudTooltip Text="Salvar em disco (a partir do conteúdo no banco)">
+                            <MudIconButton Icon="@Icons.Material.Filled.Save" Size="Size.Small" OnClick="@(() => SalvarEmDiscoAsync(context.Item))" />
                         </MudTooltip>
-                        <MudTooltip Text="Desconhecimento da Operação">
-                            <MudIconButton Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small" OnClick="@(() => ManifestarComMotivoAsync(context.Item, "desconhecimento", "Desconhecimento da Operação"))" />
-                        </MudTooltip>
-                        <MudTooltip Text="Operação Não Realizada">
-                            <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" OnClick="@(() => ManifestarComMotivoAsync(context.Item, "nao-realizada", "Operação Não Realizada"))" />
-                        </MudTooltip>
-                    }
+                        @if (context.Item.Modelo == "57")
+                        {
+                            <MudTooltip Text="Ver DACTE">
+                                <MudIconButton Icon="@Icons.Material.Filled.Receipt" Size="Size.Small" OnClick="@(() => VerDacteAsync(context.Item))" />
+                            </MudTooltip>
+                        }
+                        @if (context.Item.Modelo == "55")
+                        {
+                            <MudTooltip Text="Ver DANFE">
+                                <MudIconButton Icon="@Icons.Material.Filled.Receipt" Size="Size.Small" OnClick="@(() => VerDanfeAsync(context.Item))" />
+                            </MudTooltip>
+                            <MudTooltip Text="Ciência da Operação">
+                                <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" OnClick="@(() => ManifestarCienciaAsync(context.Item))" />
+                            </MudTooltip>
+                            <MudTooltip Text="Desconhecimento da Operação">
+                                <MudIconButton Icon="@Icons.Material.Filled.HelpOutline" Size="Size.Small" OnClick="@(() => ManifestarComMotivoAsync(context.Item, "desconhecimento", "Desconhecimento da Operação"))" />
+                            </MudTooltip>
+                            <MudTooltip Text="Operação Não Realizada">
+                                <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" OnClick="@(() => ManifestarComMotivoAsync(context.Item, "nao-realizada", "Operação Não Realizada"))" />
+                            </MudTooltip>
+                        }
+                    </div>
                 </CellTemplate>
             </TemplateColumn>
         </Columns>
@@ -192,8 +203,31 @@
     private void BaixarXml(XmlDto xml) =>
         NavigationManager.NavigateTo($"{Http.BaseAddress}api/v1/xmls/{xml.Chave}/arquivo", forceLoad: true);
 
+    private async Task SalvarEmDiscoAsync(XmlDto xml)
+    {
+        try
+        {
+            var resposta = await Http.PostAsync($"api/v1/xmls/{xml.Chave}/salvar-em-disco", null);
+            if (resposta.IsSuccessStatusCode)
+            {
+                Snackbar.Add("XML salvo em disco com sucesso.", Severity.Success);
+                return;
+            }
+
+            var problema = await resposta.Content.ReadFromJsonAsync<ErroSimples>();
+            Snackbar.Add(problema?.Erro ?? "Não foi possível salvar o XML em disco.", Severity.Error);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+    }
+
     private async Task VerDanfeAsync(XmlDto xml) =>
         await JS.InvokeVoidAsync("open", $"{Http.BaseAddress}api/v1/xmls/{xml.Chave}/danfe", "_blank");
+
+    private async Task VerDacteAsync(XmlDto xml) =>
+        await JS.InvokeVoidAsync("open", $"{Http.BaseAddress}api/v1/xmls/{xml.Chave}/dacte", "_blank");
 
     private async Task ManifestarCienciaAsync(XmlDto xml)
     {

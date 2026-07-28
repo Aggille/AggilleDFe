@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AggilleDFe.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260727192119_AdicionarNsuLog")]
-    partial class AdicionarNsuLog
+    [Migration("20260728110226_AdicionarConteudoXml")]
+    partial class AdicionarConteudoXml
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -316,6 +316,10 @@ namespace AggilleDFe.Infrastructure.Data.Migrations
                         .HasMaxLength(44)
                         .HasColumnType("character varying(44)")
                         .HasColumnName("CHAVE");
+
+                    b.Property<string>("ConteudoXml")
+                        .HasColumnType("text")
+                        .HasColumnName("CONTEUDO_XML");
 
                     b.Property<DateOnly?>("DataCancelamento")
                         .HasColumnType("date")

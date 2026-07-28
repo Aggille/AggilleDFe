@@ -5,15 +5,15 @@
 namespace AggilleDFe.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class AdicionarNsuLog : Migration
+    public partial class AdicionarConteudoXml : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
-                name: "NSU",
-                table: "LOGS",
-                type: "integer",
+            migrationBuilder.AddColumn<string>(
+                name: "CONTEUDO_XML",
+                table: "XMLS",
+                type: "text",
                 nullable: true);
         }
 
@@ -21,8 +21,8 @@ namespace AggilleDFe.Infrastructure.Data.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "NSU",
-                table: "LOGS");
+                name: "CONTEUDO_XML",
+                table: "XMLS");
         }
     }
 }

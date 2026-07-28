@@ -33,4 +33,18 @@
 - DATA_DESCONHECIMENTO DATE,
 - MOTIVO_NAO_REALIZACAO VARCHAR(1024),
 - DATA_CANCELAMENTO DATE,
-- MOTIVO_CANCELAMENTO VARCHAR(500)
+- MOTIVO_CANCELAMENTO VARCHAR(500),
+- CONTEUDO_XML TEXT
+
+# CONTEUDO_XML
+
+Conteúdo bruto do XML (documento completo, `nfeProc`/`cteProc`) gravado no
+banco no momento do download/importação — fonte de verdade independente do
+arquivo em disco. Preenchido em paralelo à tentativa de gravação em
+`Empresa.PastaXml`; se a gravação em disco falhar (permissão, caminho
+inválido, pasta errada etc.), o registro em `CONTEUDO_XML` garante que o XML
+não é perdido, e a tela "XMLS Baixados" oferece uma ação para regravar em
+disco a partir dele. Toda leitura do conteúdo do XML para qualquer operação
+(baixar arquivo, gerar DANFE/DACTE) deve preferir este campo e só cair para o
+arquivo em disco (`NOME_XML`) se ele estiver vazio (registros antigos,
+gravados antes deste campo existir).

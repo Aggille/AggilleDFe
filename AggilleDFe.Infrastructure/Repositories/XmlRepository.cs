@@ -61,9 +61,44 @@ public class XmlRepository(AppDbContext context) : IXmlRepository
             consulta = consulta.Where(x => EF.Functions.ILike(x.FornecedorNome ?? string.Empty, $"%{fornecedor}%"));
         }
 
+        // Projeta sem ConteudoXml: a listagem pode ter centenas de linhas e esse
+        // campo guarda o XML inteiro, desnecessário e custoso pra grid.
         return await consulta
             .OrderByDescending(x => x.DataDownload)
             .ThenByDescending(x => x.Id)
+            .Select(x => new Xml
+            {
+                Id = x.Id,
+                Chave = x.Chave,
+                Protocolo = x.Protocolo,
+                Emissao = x.Emissao,
+                DataDownload = x.DataDownload,
+                FornecedorNome = x.FornecedorNome,
+                FornecedorCnpj = x.FornecedorCnpj,
+                FornecedorCidade = x.FornecedorCidade,
+                FornecedorUf = x.FornecedorUf,
+                ValorTotal = x.ValorTotal,
+                ValorIcms = x.ValorIcms,
+                StatusNfe = x.StatusNfe,
+                MensagemNfe = x.MensagemNfe,
+                NomeXml = x.NomeXml,
+                Numero = x.Numero,
+                Serie = x.Serie,
+                Modelo = x.Modelo,
+                EmpresaId = x.EmpresaId,
+                Cancelada = x.Cancelada,
+                Schema = x.Schema,
+                Descricao = x.Descricao,
+                Mensagem = x.Mensagem,
+                Situacao = x.Situacao,
+                DataCiencia = x.DataCiencia,
+                DataRealizacao = x.DataRealizacao,
+                DataNaoRealizacao = x.DataNaoRealizacao,
+                DataDesconhecimento = x.DataDesconhecimento,
+                MotivoNaoRealizacao = x.MotivoNaoRealizacao,
+                DataCancelamento = x.DataCancelamento,
+                MotivoCancelamento = x.MotivoCancelamento
+            })
             .ToListAsync(cancellationToken);
     }
 }

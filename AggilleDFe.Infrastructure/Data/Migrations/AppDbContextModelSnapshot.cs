@@ -278,7 +278,8 @@ namespace AggilleDFe.Infrastructure.Data.Migrations
                         .HasColumnName("MENSAGEM");
 
                     b.Property<int?>("Nsu")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("NSU");
 
                     b.Property<int?>("QuantidadeXmls")
                         .HasColumnType("integer")
@@ -312,6 +313,10 @@ namespace AggilleDFe.Infrastructure.Data.Migrations
                         .HasMaxLength(44)
                         .HasColumnType("character varying(44)")
                         .HasColumnName("CHAVE");
+
+                    b.Property<string>("ConteudoXml")
+                        .HasColumnType("text")
+                        .HasColumnName("CONTEUDO_XML");
 
                     b.Property<DateOnly?>("DataCancelamento")
                         .HasColumnType("date")

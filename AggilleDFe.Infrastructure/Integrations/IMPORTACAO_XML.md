@@ -26,9 +26,13 @@ não existem — usado pela tela "Importar XMLs"
      `FormatoNaoReconhecido`, ignorado. **Decisão**: só se aceitam documentos
      já autorizados com protocolo (`nfeProc`/`cteProc`) — evita importar XML
      sem validade fiscal por engano.
-3. Se já existe um `Xml` com essa chave → contabilizado em `JaExistiam`,
-   **não sobrescreve** (pedido explícito do usuário: "criar o registro...
-   caso não exista a chave").
+3. Se já existe um `Xml` com essa chave → contabilizado em `JaExistiam`, e o
+   registro existente é **atualizado** com `ConteudoXml` (e `NomeXml`, só se
+   ainda estiver vazio — não sobrescreve um caminho de disco já válido)
+   **decisão revista**: a versão anterior deste serviço só pulava sem
+   atualizar nada; mudou porque muitos registros antigos (de antes do campo
+   `ConteudoXml` existir, ou baixados só como resumo) precisavam de um jeito
+   de backfill — reimportar a pasta agora serve pra isso.
 4. Busca a `Empresa` pelo CNPJ do **destinatário** (`infNFe.dest.CNPJ`/
    `infCte.dest.CNPJ`), não do emitente — as notas são emitidas *para* a
    empresa cadastrada no sistema (ela é quem recebe/contrata, não quem
@@ -42,7 +46,9 @@ não existem — usado pela tela "Importar XMLs"
 5. Caso contrário, cria o `Xml` com os mesmos campos preenchidos pela rotina
    de download (`DISTRIBUICAO_DFE.md`) — fornecedor, valores, protocolo,
    número/série, modelo, `Situacao = "Documento completo (importado)"` (para
-   diferenciar na tela de um documento baixado pela Distribuição DFe).
+   diferenciar na tela de um documento baixado pela Distribuição DFe),
+   `ConteudoXml` com o texto do arquivo lido (mesma lógica de "banco como
+   fonte de verdade" da Distribuição DFe — ver `XMLS.md`).
 
 ## Decisão: os arquivos NÃO são copiados para a pasta padrão da empresa
 
@@ -52,10 +58,11 @@ apontando para o **caminho original** do arquivo encontrado — sem copiar ou
 reorganizar. O pedido do usuário foi só "ler os xmls dessa pasta e criar o
 registro no banco", sem mencionar mover os arquivos; copiar duplicaria
 armazenamento e arriscaria conflito com arquivos que o usuário já organiza à
-sua maneira. Efeito prático: mover/apagar a pasta original depois de importar
-quebra o botão "Baixar XML"/"Ver DANFE" para esses registros (o arquivo não
-existe mais no caminho salvo) — vale avisar o usuário se isso virar problema
-no uso real.
+sua maneira. Como o conteúdo também vai para `Xml.ConteudoXml` (ver
+`XMLS.md`), mover/apagar a pasta original depois de importar **não** quebra
+mais "Baixar XML"/"Ver DANFE" (ambos preferem o conteúdo do banco); só o
+botão "Salvar em disco" da tela XMLs Baixados depende de a empresa ter uma
+`PastaXml` válida configurada.
 
 ## Sem gravação em LOGS
 

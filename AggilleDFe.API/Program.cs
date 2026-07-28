@@ -49,6 +49,7 @@ builder.Services.AddScoped<IDistribuicaoLoteService, DistribuicaoLoteService>();
 builder.Services.AddScoped<IXmlArquivoService, XmlArquivoService>();
 builder.Services.AddScoped<IManifestacaoService, ManifestacaoService>();
 builder.Services.AddScoped<IDanfeService, DanfeService>();
+builder.Services.AddScoped<IDacteService, DacteService>();
 builder.Services.AddScoped<IXmlImportService, XmlImportService>();
 builder.Services.AddHttpClient<ICnpjConsultaService, CnpjWsConsultaService>(client =>
 {

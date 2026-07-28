@@ -81,6 +81,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Mensagem).HasColumnName("MENSAGEM").HasColumnType("text");
             e.Property(x => x.XmlId).HasColumnName("XML_ID");
             e.Property(x => x.Chave).HasColumnName("CHAVE").HasMaxLength(44);
+            e.Property(x => x.Nsu).HasColumnName("NSU");
         });
 
         modelBuilder.Entity<Xml>(e =>
@@ -117,6 +118,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.MotivoNaoRealizacao).HasColumnName("MOTIVO_NAO_REALIZACAO").HasMaxLength(1024);
             e.Property(x => x.DataCancelamento).HasColumnName("DATA_CANCELAMENTO");
             e.Property(x => x.MotivoCancelamento).HasColumnName("MOTIVO_CANCELAMENTO").HasMaxLength(500);
+            e.Property(x => x.ConteudoXml).HasColumnName("CONTEUDO_XML").HasColumnType("text");
         });
     }
 }

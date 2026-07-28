@@ -8,20 +8,20 @@
 <MudText Typo="Typo.h4" Class="mb-4">Registros</MudText>
 
 <MudPaper Class="pa-4" Elevation="1">
-    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mb-4" AlignItems="AlignItems.End">
-        <MudSelect T="int?" @bind-Value="_empresaId" Label="Empresa" Variant="Variant.Outlined" Style="width: 280px" Clearable="true">
+    <div class="mb-4" style="display: grid; grid-template-columns: minmax(240px, 1fr) 180px 180px auto; gap: 16px; align-items: end;">
+        <MudSelect T="int?" @bind-Value="_empresaId" Label="Empresa" Variant="Variant.Outlined" Clearable="true">
             <MudSelectItem T="int?" Value="null">Todas as empresas</MudSelectItem>
             @foreach (var empresa in _empresas)
             {
                 <MudSelectItem T="int?" Value="empresa.Id">@empresa.RazaoSocial</MudSelectItem>
             }
         </MudSelect>
-        <MudDatePicker @bind-Date="DataInicialProxy" Label="Período de" Variant="Variant.Outlined" Style="width: 180px" Editable="true" />
-        <MudDatePicker @bind-Date="DataFinalProxy" Label="Período até" Variant="Variant.Outlined" Style="width: 180px" Editable="true" />
+        <MudDatePicker @bind-Date="DataInicialProxy" Label="Período de" Variant="Variant.Outlined" Editable="true" />
+        <MudDatePicker @bind-Date="DataFinalProxy" Label="Período até" Variant="Variant.Outlined" Editable="true" />
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="Pesquisar" Disabled="_carregando">
             Pesquisar
         </MudButton>
-    </MudStack>
+    </div>
 
     <MudDataGrid Items="_logs" Loading="_carregando" SortMode="SortMode.None" RowsPerPage="25">
         <PagerContent>

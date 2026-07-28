@@ -1,15 +1,12 @@
 using AggilleDFe.Application.Interfaces;
 using AggilleDFe.Domain.Interfaces;
 using DFe.Utils;
-using NFe.Danfe.Html;
-using NFe.Danfe.Html.CrossCutting;
-using NFe.Danfe.Html.Dominio;
 
 namespace AggilleDFe.Infrastructure.Integrations;
 
-public class DanfeService(IXmlRepository xmlRepository) : IDanfeService
+public class DacteService(IXmlRepository xmlRepository) : IDacteService
 {
-    public async Task<(string? Html, string? Erro)> ObterDanfeHtmlAsync(string chave, CancellationToken cancellationToken = default)
+    public async Task<(string? Html, string? Erro)> ObterDacteHtmlAsync(string chave, CancellationToken cancellationToken = default)
     {
         var xml = await xmlRepository.ObterPorChaveAsync(chave, cancellationToken);
         if (xml is null)
@@ -17,9 +14,9 @@ public class DanfeService(IXmlRepository xmlRepository) : IDanfeService
             return (null, "Chave não encontrada.");
         }
 
-        if (xml.Modelo != "55")
+        if (xml.Modelo != "57")
         {
-            return (null, "DANFE disponível apenas para NFe.");
+            return (null, "DACTE disponível apenas para CTe.");
         }
 
         string conteudoXml;
@@ -42,18 +39,13 @@ public class DanfeService(IXmlRepository xmlRepository) : IDanfeService
 
         try
         {
-            var nfeProc = FuncoesXml.XmlStringParaClasse<NFe.Classes.nfeProc>(conteudoXml);
-
-            var status = xml.Cancelada == "S" ? Status.Cancelada : Status.Autorizada;
-            var danfeNFe = new DanfeNFe(nfeProc.NFe, status, xml.Protocolo ?? string.Empty, string.Empty, new Issqn(), string.Empty);
-            var danfeHtml = new DanfeNfeHtml2(danfeNFe);
-            var documento = await danfeHtml.ObterDocHtmlAsync();
-
-            return (documento.Html, null);
+            var cteProc = FuncoesXml.XmlStringParaClasse<CTe.Classes.cteProc>(conteudoXml);
+            var html = DacteHtmlBuilder.Montar(cteProc, xml.Cancelada == "S");
+            return (html, null);
         }
         catch (Exception ex)
         {
-            return (null, $"Falha ao gerar o DANFE: {ex.Message}");
+            return (null, $"Falha ao gerar o DACTE: {ex.Message}");
         }
     }
 }

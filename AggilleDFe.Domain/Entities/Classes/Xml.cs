@@ -32,4 +32,5 @@ public class Xml
     public string? MotivoNaoRealizacao { get; set; }
     public DateOnly? DataCancelamento { get; set; }
     public string? MotivoCancelamento { get; set; }
+    public string? ConteudoXml { get; set; }
 }

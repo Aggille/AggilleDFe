@@ -22,12 +22,26 @@ public static class XmlEndpoints
         })
         .WithSummary("Baixa o arquivo XML de um documento pela chave (uso interno da tela XMLs Baixados, sem autenticação, protegido por CORS)");
 
+        group.MapPost("/{chave}/salvar-em-disco", async (string chave, IXmlArquivoService xmlArquivoService) =>
+        {
+            var (caminho, erro) = await xmlArquivoService.SalvarEmDiscoAsync(chave);
+            return caminho is not null ? Results.Ok(new { caminho }) : Results.BadRequest(new { erro });
+        })
+        .WithSummary("Grava (ou regrava) em disco, na pasta configurada da empresa, o XML cujo conteúdo já está no banco — uso interno da tela XMLs Baixados, para quando a gravação automática falhou ou foi para um caminho errado");
+
         group.MapGet("/{chave}/danfe", async (string chave, IDanfeService danfeService) =>
         {
             var (html, erro) = await danfeService.ObterDanfeHtmlAsync(chave);
             return html is not null ? Results.Content(html, "text/html") : Results.NotFound(new { erro });
         })
         .WithSummary("Retorna o DANFE (HTML, pronto para impressão) de uma NFe pela chave (uso interno da tela XMLs Baixados, sem autenticação, protegido por CORS)");
+
+        group.MapGet("/{chave}/dacte", async (string chave, IDacteService dacteService) =>
+        {
+            var (html, erro) = await dacteService.ObterDacteHtmlAsync(chave);
+            return html is not null ? Results.Content(html, "text/html") : Results.NotFound(new { erro });
+        })
+        .WithSummary("Retorna o DACTE (HTML, pronto para impressão, layout próprio) de um CTe pela chave (uso interno da tela XMLs Baixados, sem autenticação, protegido por CORS)");
 
         group.MapPost("/{chave}/manifestacao/ciencia", async (string chave, IManifestacaoService manifestacaoService) =>
         {

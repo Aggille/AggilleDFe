@@ -225,10 +225,11 @@ public class DistribuicaoDfeService(
             xml.MotivoCancelamento = evento.xEvento;
             await xmlRepository.AtualizarAsync(xml, cancellationToken);
             await LogarAsync(empresa.Id, "NFe: cancelamento registrado (resumo de evento).", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
-            return;
         }
 
-        await LogarAsync(empresa.Id, $"NFe: resumo de evento recebido ({evento.xEvento}).", chave: evento.chNFe, xmlId: xml?.Id, nsu: nsu, cancellationToken: cancellationToken);
+        // Resumo de evento que não é cancelamento (ex.: outras manifestações de
+        // terceiros) não gera log — decisão do usuário: só ficam em LOGS os XMLs
+        // baixados, resumos da consulta (resNFe/resumo de CTe) e erros.
     }
 
     private async Task ProcessarDocumentoCompletoNfeAsync(Empresa empresa, NfeLote item, int? nsu, CancellationToken cancellationToken)
@@ -239,7 +240,7 @@ public class DistribuicaoDfeService(
         var chave = infProt.chNFe;
 
         var conteudoXml = Compressao.Unzip(item.XmlNfe);
-        var caminho = SalvarXml(empresa.PastaXml, empresa.Cnpj!, infNFe.ide.dhEmi.DateTime, "NFe", chave, conteudoXml);
+        var (caminho, erroDisco) = TentarSalvarXmlEmDisco(empresa.PastaXml, empresa.Cnpj!, infNFe.ide.dhEmi.DateTime, "NFe", chave, conteudoXml);
 
         var xml = await xmlRepository.ObterPorChaveAsync(chave, cancellationToken);
         var novo = xml is null;
@@ -256,7 +257,8 @@ public class DistribuicaoDfeService(
         xml.ValorIcms = infNFe.total.ICMSTot.vICMS;
         xml.StatusNfe = infProt.cStat;
         xml.MensagemNfe = infProt.xMotivo;
-        xml.NomeXml = caminho;
+        xml.NomeXml = caminho ?? xml.NomeXml;
+        xml.ConteudoXml = conteudoXml;
         xml.Numero = (int)infNFe.ide.nNF;
         xml.Serie = infNFe.ide.serie.ToString();
         xml.Modelo = "55";
@@ -266,7 +268,16 @@ public class DistribuicaoDfeService(
         if (novo) await xmlRepository.IncluirAsync(xml, cancellationToken);
         else await xmlRepository.AtualizarAsync(xml, cancellationToken);
 
-        await LogarAsync(empresa.Id, "NFe: XML baixado e salvo.", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
+        if (erroDisco is null)
+        {
+            await LogarAsync(empresa.Id, "NFe: XML baixado e salvo.", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
+        }
+        else
+        {
+            await LogarAsync(empresa.Id,
+                $"NFe: XML baixado e registrado no banco, mas falhou ao gravar em disco (pasta \"{empresa.PastaXml}\"): {erroDisco}",
+                chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
+        }
     }
 
     private async Task ProcessarEventoCompletoNfeAsync(Empresa empresa, NFe.Classes.Servicos.DistribuicaoDFe.Schemas.procEventoNFe evt, int? nsu, CancellationToken cancellationToken)
@@ -283,10 +294,10 @@ public class DistribuicaoDfeService(
             xml.MotivoCancelamento = infEvento.xMotivo;
             await xmlRepository.AtualizarAsync(xml, cancellationToken);
             await LogarAsync(empresa.Id, "NFe: cancelamento registrado (evento completo).", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
-            return;
         }
 
-        await LogarAsync(empresa.Id, $"NFe: evento completo recebido ({infEvento.xEvento}).", chave: chave, xmlId: xml?.Id, nsu: nsu, cancellationToken: cancellationToken);
+        // Evento completo que não é cancelamento não gera log (mesma decisão de
+        // ProcessarResumoEventoNfeAsync).
     }
 
     // ----------------------------------------------------------------------------
@@ -387,7 +398,7 @@ public class DistribuicaoDfeService(
         var infProt = doc.protCTe.infProt;
         var chave = infProt.chCTe;
 
-        var caminho = SalvarXml(empresa.PastaXml, empresa.Cnpj!, infCte.ide.dhEmi.DateTime, "CTe", chave, conteudoXml);
+        var (caminho, erroDisco) = TentarSalvarXmlEmDisco(empresa.PastaXml, empresa.Cnpj!, infCte.ide.dhEmi.DateTime, "CTe", chave, conteudoXml);
 
         var xml = await xmlRepository.ObterPorChaveAsync(chave, cancellationToken);
         var novo = xml is null;
@@ -403,7 +414,8 @@ public class DistribuicaoDfeService(
         xml.ValorTotal = infCte.vPrest.vTPrest;
         xml.StatusNfe = infProt.cStat;
         xml.MensagemNfe = infProt.xMotivo;
-        xml.NomeXml = caminho;
+        xml.NomeXml = caminho ?? xml.NomeXml;
+        xml.ConteudoXml = conteudoXml;
         xml.Numero = (int)infCte.ide.nCT;
         xml.Serie = infCte.ide.serie.ToString();
         xml.Modelo = "57";
@@ -413,7 +425,16 @@ public class DistribuicaoDfeService(
         if (novo) await xmlRepository.IncluirAsync(xml, cancellationToken);
         else await xmlRepository.AtualizarAsync(xml, cancellationToken);
 
-        await LogarAsync(empresa.Id, "CTe: XML baixado e salvo.", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
+        if (erroDisco is null)
+        {
+            await LogarAsync(empresa.Id, "CTe: XML baixado e salvo.", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
+        }
+        else
+        {
+            await LogarAsync(empresa.Id,
+                $"CTe: XML baixado e registrado no banco, mas falhou ao gravar em disco (pasta \"{empresa.PastaXml}\"): {erroDisco}",
+                chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
+        }
     }
 
     private async Task ProcessarEventoCompletoCteAsync(Empresa empresa, string conteudoXml, int? nsu, CancellationToken cancellationToken)
@@ -431,10 +452,10 @@ public class DistribuicaoDfeService(
             xml.MotivoCancelamento = infEvento.xMotivo;
             await xmlRepository.AtualizarAsync(xml, cancellationToken);
             await LogarAsync(empresa.Id, "CTe: cancelamento registrado (evento completo).", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
-            return;
         }
 
-        await LogarAsync(empresa.Id, $"CTe: evento completo recebido ({infEvento.xEvento}).", chave: chave, xmlId: xml?.Id, nsu: nsu, cancellationToken: cancellationToken);
+        // Evento completo que não é cancelamento não gera log (mesma decisão do
+        // lado NFe, ver ProcessarEventoCompletoNfeAsync).
     }
 
     /// <summary>
@@ -474,19 +495,23 @@ public class DistribuicaoDfeService(
     // Auxiliares
     // ----------------------------------------------------------------------------
 
-    private static string SalvarXml(string? pastaBase, string cnpj, DateTime dataEmissao, string tipoDocumento, string chave, string conteudoXml)
+    /// <summary>
+    /// Tenta gravar o XML em disco sem nunca lançar exceção — a gravação em disco é
+    /// "best effort": o conteúdo já vai para o banco (Xml.ConteudoXml) independente do
+    /// resultado, então uma falha aqui (permissão, caminho errado, disco cheio) não pode
+    /// derrubar o processamento do item nem impedir o registro no banco. Chamador loga
+    /// <c>Erro</c> quando não nulo.
+    /// </summary>
+    private static (string? Caminho, string? Erro) TentarSalvarXmlEmDisco(string? pastaBase, string cnpj, DateTime dataEmissao, string tipoDocumento, string chave, string conteudoXml)
     {
-        if (string.IsNullOrWhiteSpace(pastaBase))
+        try
         {
-            throw new InvalidOperationException("A empresa não possui uma pasta de XMLs configurada (PastaXml).");
+            return (Storage.CaminhoXmlHelper.GravarArquivo(pastaBase, cnpj, dataEmissao, tipoDocumento, chave, conteudoXml), null);
         }
-
-        var pasta = Path.Combine(pastaBase, cnpj, dataEmissao.Year.ToString("D4"), dataEmissao.Month.ToString("D2"), tipoDocumento);
-        Directory.CreateDirectory(pasta);
-
-        var caminho = Path.Combine(pasta, $"{chave}.xml");
-        File.WriteAllText(caminho, conteudoXml);
-        return caminho;
+        catch (Exception ex)
+        {
+            return (null, ex.Message);
+        }
     }
 
     private async Task LogarAsync(

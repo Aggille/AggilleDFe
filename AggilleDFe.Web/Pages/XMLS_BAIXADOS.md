@@ -27,11 +27,22 @@
   - **Baixar XML** (todas as linhas): `NavigationManager.NavigateTo(...,
     forceLoad: true)` para `GET /api/v1/xmls/{chave}/arquivo` — o endpoint
     devolve `Content-Disposition: attachment`, então isso dispara o download
-    do navegador direto, sem JS interop.
+    do navegador direto, sem JS interop. Prioriza `Xml.ConteudoXml` (banco),
+    cai para o arquivo em `NomeXml` no disco se estiver vazio.
+  - **Salvar em disco** (todas as linhas): `POST
+    /api/v1/xmls/{chave}/salvar-em-disco` (sem corpo) — regrava em disco, na
+    pasta configurada da empresa (`Empresa.PastaXml`), o XML cujo conteúdo já
+    está no banco (`Xml.ConteudoXml`); útil quando a gravação automática
+    falhou ou foi para um caminho errado (ver "Banco de dados como fonte de
+    verdade" em `DISTRIBUICAO_DFE.md`). Mostra snackbar de sucesso/erro, não
+    recarrega a grid (não muda nenhuma coluna exibida).
   - **Ver DANFE** (só `Modelo == "55"`): `IJSRuntime.InvokeVoidAsync("open",
     url, "_blank")` para `GET /api/v1/xmls/{chave}/danfe` — abre o DANFE em
     HTML numa aba nova (ver `AggilleDFe.Infrastructure/Integrations/DANFE.md`);
     o usuário imprime/salva como PDF pelo próprio navegador.
+  - **Ver DACTE** (só `Modelo == "57"`): mesmo padrão do DANFE, pra
+    `GET /api/v1/xmls/{chave}/dacte` — layout próprio, sem pacote pronto (ver
+    `AggilleDFe.Infrastructure/Integrations/DACTE.md`).
   - **Ciência da Operação** (só `Modelo == "55"`): confirmação simples
     (`ShowMessageBoxAsync`) → `POST /api/v1/xmls/{chave}/manifestacao/ciencia`.
   - **Desconhecimento da Operação** / **Operação Não Realizada** (só

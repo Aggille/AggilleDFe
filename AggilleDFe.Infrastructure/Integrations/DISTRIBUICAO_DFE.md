@@ -52,12 +52,18 @@ Cada modelo (NFe/CTe) mantém seu próprio cursor de NSU
    Zeus (`NFe.AppTeste.NetCore`/`CTe.AppTeste.NetCore`) para não disparar o
    erro 656.
 
-Cada item processado (sucesso ou erro) gera uma linha em `LOGS`
-(`Chave`/`XmlId` preenchidos quando aplicável, `Nsu` sempre preenchido com o
-NSU do item/consulta que originou o evento); ao final de cada laço é
-gravada uma linha de resumo com `QuantidadeXmls`, o intervalo
-`HoraInicio`/`HoraFinal` do laço inteiro e o `Nsu` (último NSU alcançado,
-igual ao `UltimoNsu`/`UltimoNsuCte` salvo na empresa). As linhas geradas por
+**Decisão confirmada com o usuário sobre o que vira log**: `LOGS` só registra
+XML baixado (documento completo, com ou sem sucesso ao gravar em disco),
+resumo da consulta (`ResNFe`/resumo genérico de CTe) e erros (cStat
+inesperado, exceção ao processar item, falha de manifestação). Eventos que
+não são cancelamento (`ResEvento`/`ProcEventoNFe`/`procEventoCTe` sem
+`tpEvento == 110111`) **não geram log** — só atualizam `Xml` quando aplicável
+(cancelamento sempre loga, por ser uma mudança de estado relevante). `Chave`/
+`XmlId` são preenchidos quando aplicável, `Nsu` sempre preenchido com o NSU
+do item/consulta que originou a linha; ao final de cada laço é gravada uma
+linha de resumo com `QuantidadeXmls`, o intervalo `HoraInicio`/`HoraFinal` do
+laço inteiro e o `Nsu` (último NSU alcançado, igual ao
+`UltimoNsu`/`UltimoNsuCte` salvo na empresa). As linhas geradas por
 `ManifestacaoService` (manifestação avulsa, fora do laço de distribuição)
 não têm `Nsu` — não há um NSU em escopo nesse fluxo, que é acionado por
 `Chave` diretamente.
@@ -68,10 +74,10 @@ não têm `Nsu` — não há um NSU em escopo nesse fluxo, que é acionado por
 
 | Propriedade não-nula | Significado | Ação |
 |---|---|---|
-| `ResNFe` | Resumo do documento | Grava/atualiza `Xml` (Situacao="Resumo"). Se `Empresa.Manifesta == "S"`, chama `RecepcaoEventoManifestacaoDestinatario` com `NFeTipoEvento.TeMdCienciaDaOperacao` (210210) — ver decisão abaixo. |
-| `ResEvento` | Resumo de evento | Se `tpEvento == "110111"` (Cancelamento) e já existe `Xml` com essa chave, marca `Cancelada = "S"`. Senão só loga. |
-| `NfeProc` | Documento completo (`NFe` + `protNFe`) | Descompacta (`Compressao.Unzip`), salva o arquivo na pasta (ver convenção abaixo) e grava/atualiza `Xml` com todos os campos. |
-| `ProcEventoNFe` | Evento completo | Se `tpEvento == 110111`, marca `Cancelada`. Sempre loga. |
+| `ResNFe` | Resumo do documento | Grava/atualiza `Xml` (Situacao="Resumo") e **loga** (resumo da consulta). Se `Empresa.Manifesta == "S"`, chama `RecepcaoEventoManifestacaoDestinatario` com `NFeTipoEvento.TeMdCienciaDaOperacao` (210210) — ver decisão abaixo. |
+| `ResEvento` | Resumo de evento | Se `tpEvento == "110111"` (Cancelamento) e já existe `Xml` com essa chave, marca `Cancelada = "S"` e loga. Senão, **não loga** (evento que não é cancelamento). |
+| `NfeProc` | Documento completo (`NFe` + `protNFe`) | Descompacta (`Compressao.Unzip`), tenta salvar o arquivo na pasta (ver convenção abaixo) — falha na gravação não impede o registro no banco, ver seção "Banco de dados como fonte de verdade" — e grava/atualiza `Xml` com todos os campos. **Loga** (XML baixado, com ou sem sucesso ao gravar em disco). |
+| `ProcEventoNFe` | Evento completo | Se `tpEvento == 110111`, marca `Cancelada` e loga. Senão, **não loga**. |
 
 **CTe** (`loteDistDFeInt` do CTe **não** tem propriedades tipadas — só
 `NSU`/`schema`/`XmlNfe` — confirmado por reflexão e pelo código-fonte oficial
@@ -80,9 +86,9 @@ XML descompactada** (`Compressao.Unzip(...).RemoverDeclaracaoXml()`):
 
 | Conteúdo começa com | Ação |
 |---|---|
-| `<cteProc` | Documento completo — desserializa com `FuncoesXml.XmlStringParaClasse<CTe.Classes.cteProc>`, salva o arquivo e grava/atualiza `Xml`. |
-| `<procEventoCTe` | Evento completo — desserializa com `FuncoesXml.XmlStringParaClasse<CTe.Classes.Servicos.DistribuicaoDFe.Schemas.procEventoCTe>`; se `tpEvento == 110111`, marca `Cancelada`. Sempre loga. |
-| Qualquer outro (ex.: `resCTe`/`resEvento`, resumo raro) | **Decisão confirmada com o usuário**: só registra um `Xml` mínimo (chave extraída via parsing genérico com `XDocument`, procurando o elemento `chCTe`) e loga — **sem manifestação automática de CTe**. Não existe um equivalente claro de "Ciência da Operação" para CTe nesta versão da lib; o evento disponível é "Prestação de serviço em desacordo" (`CTeTipoEvento.Desacordo`), que é uma decisão do usuário/operador, não algo a automatizar. |
+| `<cteProc` | Documento completo — desserializa com `FuncoesXml.XmlStringParaClasse<CTe.Classes.cteProc>`, tenta salvar o arquivo e grava/atualiza `Xml`. **Loga** (XML baixado, com ou sem sucesso ao gravar em disco). |
+| `<procEventoCTe` | Evento completo — desserializa com `FuncoesXml.XmlStringParaClasse<CTe.Classes.Servicos.DistribuicaoDFe.Schemas.procEventoCTe>`; se `tpEvento == 110111`, marca `Cancelada` e loga. Senão, **não loga**. |
+| Qualquer outro (ex.: `resCTe`/`resEvento`, resumo raro) | **Decisão confirmada com o usuário**: só registra um `Xml` mínimo (chave extraída via parsing genérico com `XDocument`, procurando o elemento `chCTe`) e **loga** (resumo da consulta) — **sem manifestação automática de CTe**. Não existe um equivalente claro de "Ciência da Operação" para CTe nesta versão da lib; o evento disponível é "Prestação de serviço em desacordo" (`CTeTipoEvento.Desacordo`), que é uma decisão do usuário/operador, não algo a automatizar. |
 
 ## Decisões de negócio confirmadas com o usuário
 
@@ -98,9 +104,26 @@ XML descompactada** (`Compressao.Unzip(...).RemoverDeclaracaoXml()`):
 
 `{Empresa.PastaXml}/{Empresa.Cnpj}/{ano:D4}/{mes:D2}/{NFe|CTe}/{chave}.xml`
 (ano/mês da data de emissão do documento, não da data de download), criando
-os diretórios conforme necessário. Se `Empresa.PastaXml` estiver vazio, o
-item falha (é tratado como erro por item, logado, sem interromper o restante
-do lote nem os demais NSUs).
+os diretórios conforme necessário — convenção compartilhada em
+`AggilleDFe.Infrastructure/Storage/CaminhoXmlHelper.cs`.
+
+## Banco de dados como fonte de verdade (`Xml.ConteudoXml`)
+
+A gravação em disco é **best effort**: o conteúdo do XML completo
+(`nfeProc`/`cteProc`) é sempre gravado em `Xml.ConteudoXml` (ver `XMLS.md`),
+independente do resultado da gravação em disco. Se `Empresa.PastaXml`
+estiver vazio ou a gravação falhar por qualquer motivo (permissão, caminho
+errado, disco cheio), o item **não falha mais** — o registro em `XMLS` é
+persistido normalmente com o conteúdo, `NomeXml` fica com o valor anterior
+(ou nulo, se novo), e é gravada uma linha em `LOGS` com a mensagem específica
+"XML baixado e registrado no banco, mas falhou ao gravar em disco: {erro}"
+(em vez do erro genérico "erro ao processar NSU X"). A tela "XMLS Baixados"
+tem uma ação "Salvar em disco" (`POST /api/v1/xmls/{chave}/salvar-em-disco`,
+`XmlArquivoService.SalvarEmDiscoAsync`) que regrava o arquivo a partir do
+conteúdo já no banco — útil quando a pasta configurada estava errada e foi
+corrigida depois. Qualquer leitura do XML para outra operação (baixar
+arquivo, DANFE) também prefere `ConteudoXml` e só cai para o arquivo em disco
+se ele estiver vazio (registros antigos).
 
 ## Limitações conhecidas / fora de escopo
 

@@ -62,8 +62,16 @@ public class XmlImportService(IEmpresaRepository empresaRepository, IXmlReposito
         var infProt = doc.protNFe.infProt;
         var chave = infProt.chNFe;
 
-        if (await xmlRepository.ObterPorChaveAsync(chave, cancellationToken) is not null)
+        var existente = await xmlRepository.ObterPorChaveAsync(chave, cancellationToken);
+        if (existente is not null)
         {
+            // Registro já existia (ex.: só o resumo, ou baixado antes deste campo
+            // existir) — atualiza com o conteúdo real em vez de só pular, e
+            // preenche NomeXml se ainda estiver vazio, sem sobrescrever um caminho
+            // já válido de uma gravação em disco anterior.
+            existente.ConteudoXml = conteudo;
+            existente.NomeXml ??= arquivo;
+            await xmlRepository.AtualizarAsync(existente, cancellationToken);
             resultado.JaExistiam++;
             return;
         }
@@ -100,6 +108,7 @@ public class XmlImportService(IEmpresaRepository empresaRepository, IXmlReposito
             Serie = infNFe.ide.serie.ToString(),
             Modelo = "55",
             NomeXml = arquivo,
+            ConteudoXml = conteudo,
             Situacao = "Documento completo (importado)"
         };
 
@@ -114,8 +123,12 @@ public class XmlImportService(IEmpresaRepository empresaRepository, IXmlReposito
         var infProt = doc.protCTe.infProt;
         var chave = infProt.chCTe;
 
-        if (await xmlRepository.ObterPorChaveAsync(chave, cancellationToken) is not null)
+        var existente = await xmlRepository.ObterPorChaveAsync(chave, cancellationToken);
+        if (existente is not null)
         {
+            existente.ConteudoXml = conteudo;
+            existente.NomeXml ??= arquivo;
+            await xmlRepository.AtualizarAsync(existente, cancellationToken);
             resultado.JaExistiam++;
             return;
         }
@@ -151,6 +164,7 @@ public class XmlImportService(IEmpresaRepository empresaRepository, IXmlReposito
             Serie = infCte.ide.serie.ToString(),
             Modelo = "57",
             NomeXml = arquivo,
+            ConteudoXml = conteudo,
             Situacao = "Documento completo (importado)"
         };
 

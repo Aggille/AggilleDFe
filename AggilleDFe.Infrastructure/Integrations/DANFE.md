@@ -32,10 +32,13 @@ isso, `dotnet build`/`dotnet restore` avisam `NU1902`/`NU1903`.
 
 ## Como funciona
 
-1. Busca `Xml` pela chave; exige `Modelo == "55"` (só NFe) e `NomeXml`
-   preenchido com um arquivo existente em disco (documento completo já
-   baixado — resumo não tem DANFE).
-2. Lê o XML do disco e desserializa com
+1. Busca `Xml` pela chave; exige `Modelo == "55"` (só NFe) e conteúdo
+   disponível (documento completo já baixado — resumo não tem DANFE):
+   prefere `Xml.ConteudoXml` (banco); se vazio, cai para o arquivo em
+   `NomeXml` no disco (registros antigos, gravados antes desse campo
+   existir) — mesma prioridade banco→disco de `XmlArquivoService`, ver
+   `XMLS.md`.
+2. Desserializa o conteúdo com
    `FuncoesXml.XmlStringParaClasse<NFe.Classes.nfeProc>` (mesmo padrão usado
    em `DISTRIBUICAO_DFE.md`).
 3. Monta `NFe.Danfe.Html.Dominio.DanfeNFe(nfeProc.NFe, status, protocolo,
@@ -50,13 +53,9 @@ isso, `dotnet build`/`dotnet restore` avisam `NU1902`/`NU1903`.
 
 ## Limitações conhecidas
 
-- Só NFe — CTe usa outro documento (DACTE), **não implementado**: não existe
-  nenhum pacote Zeus.Net publicado no NuGet pra DACTE (confirmado buscando
-  `Zeus.Net.CTe.Dacte.*` — nenhum resultado). Só existe código-fonte no
-  próprio repositório do DFe.NET (`CTe.Dacte.Base`/`CTe.Dacte.Fast`/
-  `CTe.Dacte.OpenFast`), nunca publicado como pacote, e que depende do motor
-  `FastReport.OpenSource` (relatórios `.frx`) — integração bem mais
-  trabalhosa que o pacote HTML pronto usado aqui pro DANFE de NF-e.
-  Decisão confirmada com o usuário: deixar de fora por enquanto; o botão
-  "Ver DANFE" da tela XMLs Baixados continua só para `Modelo == "55"`.
+- Só NFe — CTe usa outro documento (DACTE), implementado à parte em
+  `DacteService`/`DACTE.md` (layout próprio, sem pacote Zeus.Net — não existe
+  nenhum publicado pra DACTE). O botão "Ver DACTE" da tela XMLs Baixados é
+  exibido só para `Modelo == "57"`, ao lado (não em substituição) de "Ver
+  DANFE", que continua só para `Modelo == "55"`.
 - Sem logo da empresa (campo não existe na entidade `Empresa` hoje).
