@@ -13,4 +13,5 @@ public class Configuracao
     public string? UsuarioApi { get; set; }
     public string? SenhaApi { get; set; }
     public string? ProcessarIndividualmente { get; set; }
+    public int? UltimaEmpresaProcessadaId { get; set; }
 }

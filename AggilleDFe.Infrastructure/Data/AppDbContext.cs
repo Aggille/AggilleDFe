@@ -27,6 +27,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.UsuarioApi).HasColumnName("USUARIO_API").HasMaxLength(50);
             e.Property(x => x.SenhaApi).HasColumnName("SENHA_API").HasMaxLength(20);
             e.Property(x => x.ProcessarIndividualmente).HasColumnName("PROCESSAR_INDIVIDUALMENTE").HasMaxLength(1);
+            e.Property(x => x.UltimaEmpresaProcessadaId).HasColumnName("ULTIMA_EMPRESA_PROCESSADA_ID");
         });
 
         modelBuilder.Entity<Empresa>(e =>

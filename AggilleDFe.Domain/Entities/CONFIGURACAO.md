@@ -15,3 +15,8 @@
 - USUARIO_API VARCHAR(50),
 - SENHA_API VARCHAR(20),
 - PROCESSAR_INDIVIDUALMENTE VARCHAR(1)
+- ULTIMA_EMPRESA_PROCESSADA_ID INTEGER (Id da última empresa processada no
+  ciclo automático, quando PROCESSAR_INDIVIDUALMENTE = "S" — usado pelo
+  round-robin do DistribuicaoLoteService, ver DISTRIBUICAO_LOTE.md;
+  gerenciado internamente pelo Worker, não é exposto/editável na tela de
+  Configuração)
