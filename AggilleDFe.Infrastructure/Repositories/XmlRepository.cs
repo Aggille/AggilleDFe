@@ -65,6 +65,7 @@ public class XmlRepository(AppDbContext context) : IXmlRepository
         // campo guarda o XML inteiro, desnecessário e custoso pra grid.
         return await consulta
             .OrderByDescending(x => x.DataDownload)
+            .ThenByDescending(x => x.Emissao)
             .ThenByDescending(x => x.Id)
             .Select(x => new Xml
             {

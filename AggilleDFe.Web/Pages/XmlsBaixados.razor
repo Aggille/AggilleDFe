@@ -123,8 +123,8 @@
     private string? _fornecedor;
     private DateOnly? _dataInicial = DateOnly.FromDateTime(DateTime.Now).AddDays(-7);
     private DateOnly? _dataFinal = DateOnly.FromDateTime(DateTime.Now);
-    private DateOnly? _emissaoInicial;
-    private DateOnly? _emissaoFinal;
+    private DateOnly? _emissaoInicial = DateOnly.FromDateTime(DateTime.Now).AddDays(-7);
+    private DateOnly? _emissaoFinal = DateOnly.FromDateTime(DateTime.Now);
     private bool _carregando;
 
     private DateTime? DataInicialProxy
