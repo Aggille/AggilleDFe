@@ -20,8 +20,7 @@ public static class XmlEndpoints
                 ? Results.File(conteudo, "application/xml", $"{chave}.xml")
                 : Results.NotFound(new { erro });
         })
-        .RequireAuthorization("BasicApi")
-        .WithSummary("Baixa o arquivo XML de um documento pela chave (uso interno da tela XMLs Baixados) — exige Basic Auth (mesmas credenciais da API de integração, tela Configuração); o navegador pede usuário/senha na primeira vez e guarda para a sessão");
+        .WithSummary("Baixa o arquivo XML de um documento pela chave (uso interno da tela XMLs Baixados, sem autenticação — autenticação Basic é só para a API externa, /api/v1/dfe/*)");
 
         group.MapPost("/{chave}/salvar-em-disco", async (string chave, IXmlArquivoService xmlArquivoService) =>
         {
@@ -35,16 +34,14 @@ public static class XmlEndpoints
             var (html, erro) = await danfeService.ObterDanfeHtmlAsync(chave);
             return html is not null ? Results.Content(html, "text/html") : Results.NotFound(new { erro });
         })
-        .RequireAuthorization("BasicApi")
-        .WithSummary("Retorna o DANFE (HTML, pronto para impressão) de uma NFe pela chave (uso interno da tela XMLs Baixados) — exige Basic Auth (mesmas credenciais da API de integração, tela Configuração)");
+        .WithSummary("Retorna o DANFE (HTML, pronto para impressão) de uma NFe pela chave (uso interno da tela XMLs Baixados, sem autenticação — autenticação Basic é só para a API externa, /api/v1/dfe/*)");
 
         group.MapGet("/{chave}/dacte", async (string chave, IDacteService dacteService) =>
         {
             var (html, erro) = await dacteService.ObterDacteHtmlAsync(chave);
             return html is not null ? Results.Content(html, "text/html") : Results.NotFound(new { erro });
         })
-        .RequireAuthorization("BasicApi")
-        .WithSummary("Retorna o DACTE (HTML, pronto para impressão, layout próprio) de um CTe pela chave (uso interno da tela XMLs Baixados) — exige Basic Auth (mesmas credenciais da API de integração, tela Configuração)");
+        .WithSummary("Retorna o DACTE (HTML, pronto para impressão, layout próprio) de um CTe pela chave (uso interno da tela XMLs Baixados, sem autenticação — autenticação Basic é só para a API externa, /api/v1/dfe/*)");
 
         group.MapPost("/{chave}/manifestacao/ciencia", async (string chave, IManifestacaoService manifestacaoService) =>
         {
