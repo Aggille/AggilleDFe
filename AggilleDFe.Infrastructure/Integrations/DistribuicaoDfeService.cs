@@ -87,7 +87,6 @@ public class DistribuicaoDfeService(
 
             if (status.cStat == CStatNenhumDocumentoLocalizado)
             {
-                await LogarAsync(empresa.Id, "NFe: nenhum novo documento localizado na SEFAZ.", nsu: ultNsu, cancellationToken: cancellationToken);
                 break;
             }
 
@@ -201,10 +200,12 @@ public class DistribuicaoDfeService(
                 xml.DataCiencia = DateOnly.FromDateTime(DateTime.Now);
                 await xmlRepository.AtualizarAsync(xml, cancellationToken);
             }
-
-            await LogarAsync(empresa.Id,
-                $"NFe: manifestação de Ciência da Operação solicitada (cStat {loteCStat} - {retornoManifestacao.Retorno?.xMotivo}).",
-                chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
+            else
+            {
+                await LogarAsync(empresa.Id,
+                    $"NFe: manifestação de Ciência da Operação não confirmada (cStat {loteCStat} - {retornoManifestacao.Retorno?.xMotivo}).",
+                    chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
+            }
         }
         catch (Exception ex)
         {
@@ -310,7 +311,6 @@ public class DistribuicaoDfeService(
 
             if (status.cStat == CStatNenhumDocumentoLocalizado)
             {
-                await LogarAsync(empresa.Id, "CTe: nenhum novo documento localizado na SEFAZ.", nsu: ultNsu, cancellationToken: cancellationToken);
                 break;
             }
 

@@ -107,7 +107,6 @@ public class ManifestacaoService(
 
             AtualizarXmlConformeEvento(xml, tipoEvento, justificativa);
             await xmlRepository.AtualizarAsync(xml, cancellationToken);
-            await LogarAsync(empresa.Id, $"Manifestação {DescricaoEvento(tipoEvento)} realizada.", chave, xml.Id, cancellationToken);
 
             return (true, null);
         }

@@ -4,6 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Sem isso, o NuGet 10 "poda" pacotes que julga já providos pelo shared
+         framework do ASP.NET Core (ex.: System.Security.Cryptography.Xml), o que
+         quebra em imagens Docker mínimas/publish self-contained trimado. -->
+    <RestoreEnablePackagePruning>false</RestoreEnablePackagePruning>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +20,9 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.10" />
     <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
+    <!-- DFe.Utils.dll (dependência do Zeus.Net.NFe/CTe) referencia essa assembly em
+         tempo de execução para assinatura XML na manifestação do destinatário. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>

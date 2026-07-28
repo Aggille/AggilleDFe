@@ -13,6 +13,9 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- DFe.Utils.dll (dependência do Zeus.Net.NFe/CTe) referencia essa assembly em
+         tempo de execução para assinatura XML, mas o pacote não a traz transitivamente. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.10" />
     <PackageReference Include="Zeus.Net.CTe" Version="2026.7.16.1250" />
     <PackageReference Include="Zeus.Net.NFe.Danfe.Html" Version="2026.7.16.1250" />
     <PackageReference Include="Zeus.Net.NFe.Danfe.QuestPdf" Version="2026.7.16.1250" />
