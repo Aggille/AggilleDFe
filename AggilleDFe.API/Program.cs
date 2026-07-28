@@ -60,7 +60,12 @@ builder.Services.AddHttpClient<ICnpjConsultaService, CnpjWsConsultaService>(clie
 
 builder.Services.AddAuthentication("BasicApi")
     .AddScheme<AuthenticationSchemeOptions, BasicApiAuthenticationHandler>("BasicApi", null);
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("BasicApi", policy => policy
+        .AddAuthenticationSchemes("BasicApi")
+        .RequireAuthenticatedUser());
+});
 
 var app = builder.Build();
 
