@@ -2,6 +2,8 @@
 @implements IDisposable
 @using AggilleDFe.Web.Services
 @inject ThemeService Theme
+@inject AutenticacaoService AutenticacaoService
+@inject NavigationManager NavigationManager
 
 <MudThemeProvider IsDarkMode="@Theme.IsDarkMode" />
 <MudPopoverProvider />
@@ -19,10 +21,18 @@
                        Href="/" />
         <MudText Typo="Typo.h6" Class="ml-2">AggilleDFe</MudText>
         <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+                <MudText Typo="Typo.body2" Class="mr-2">@context.User.Identity?.Name</MudText>
+            </Authorized>
+        </AuthorizeView>
         <MudTooltip Text="@(Theme.IsDarkMode ? "Modo claro" : "Modo escuro")">
             <MudIconButton Icon="@(Theme.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                            Color="Color.Inherit"
                            OnClick="AlternarTemaAsync" />
+        </MudTooltip>
+        <MudTooltip Text="Sair">
+            <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" OnClick="SairAsync" />
         </MudTooltip>
     </MudAppBar>
 
@@ -48,6 +58,12 @@
     }
 
     private async Task AlternarTemaAsync() => await Theme.ToggleAsync();
+
+    private async Task SairAsync()
+    {
+        await AutenticacaoService.SairAsync();
+        NavigationManager.NavigateTo("/login");
+    }
 
     public void Dispose() => Theme.OnChange -= StateHasChanged;
 }

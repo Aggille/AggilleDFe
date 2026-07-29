@@ -9,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Log> Logs => Set<Log>();
     public DbSet<Xml> Xmls => Set<Xml>();
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -122,6 +123,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.DataCancelamento).HasColumnName("DATA_CANCELAMENTO");
             e.Property(x => x.MotivoCancelamento).HasColumnName("MOTIVO_CANCELAMENTO").HasMaxLength(500);
             e.Property(x => x.ConteudoXml).HasColumnName("CONTEUDO_XML").HasColumnType("text");
+        });
+
+        modelBuilder.Entity<Usuario>(e =>
+        {
+            e.ToTable("USUARIOS");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("ID");
+            e.Property(x => x.Login).HasColumnName("LOGIN").HasMaxLength(50).IsRequired();
+            e.Property(x => x.Nome).HasColumnName("NOME").HasMaxLength(100);
+            e.Property(x => x.SenhaHash).HasColumnName("SENHA_HASH").HasMaxLength(1024).IsRequired();
+            e.Property(x => x.Administrador).HasColumnName("ADMINISTRADOR").HasMaxLength(1);
+            e.Property(x => x.AcessoXmlsBaixados).HasColumnName("ACESSO_XMLS_BAIXADOS").HasMaxLength(1);
+            e.Property(x => x.AcessoRegistros).HasColumnName("ACESSO_REGISTROS").HasMaxLength(1);
+            e.Property(x => x.AcessoEmpresas).HasColumnName("ACESSO_EMPRESAS").HasMaxLength(1);
+            e.Property(x => x.AcessoConfiguracao).HasColumnName("ACESSO_CONFIGURACAO").HasMaxLength(1);
+            e.Property(x => x.AcessoImportacao).HasColumnName("ACESSO_IMPORTACAO").HasMaxLength(1);
+            e.Property(x => x.AcessoBaixarXml).HasColumnName("ACESSO_BAIXAR_XML").HasMaxLength(1);
+            e.Property(x => x.Inativo).HasColumnName("INATIVO").HasMaxLength(1);
+            e.HasIndex(x => x.Login).IsUnique();
         });
     }
 }

@@ -2,12 +2,14 @@ using AggilleDFe.API;
 using AggilleDFe.API.Auth;
 using AggilleDFe.Application.Interfaces;
 using AggilleDFe.Application.Services;
+using AggilleDFe.Domain.Entities;
 using AggilleDFe.Domain.Interfaces;
 using AggilleDFe.Infrastructure.Data;
 using AggilleDFe.Infrastructure.Integrations;
 using AggilleDFe.Infrastructure.Repositories;
 using AggilleDFe.Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,6 +55,10 @@ builder.Services.AddScoped<IDacteService, DacteService>();
 builder.Services.AddScoped<IXmlImportService, XmlImportService>();
 builder.Services.AddScoped<IEmailNotificacaoService, EmailNotificacaoService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<IAutenticacaoService, AutenticacaoService>();
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.AddHttpClient<ICnpjConsultaService, CnpjWsConsultaService>(client =>
 {
     client.BaseAddress = new Uri("https://publica.cnpj.ws/");
@@ -82,5 +88,32 @@ app.MapLogEndpoints();
 app.MapXmlEndpoints();
 app.MapDfeEndpoints();
 app.MapDashboardEndpoints();
+app.MapAutenticacaoEndpoints();
+app.MapUsuarioEndpoints();
+
+using (var scope = app.Services.CreateScope())
+{
+    var usuarioRepository = scope.ServiceProvider.GetRequiredService<IUsuarioRepository>();
+    if (!await usuarioRepository.ExisteAlgumAsync())
+    {
+        var hasher = new PasswordHasher<Usuario>();
+        var usuarioPadrao = new Usuario
+        {
+            Login = "aggille",
+            Nome = "Aggille",
+            Administrador = "S",
+            AcessoXmlsBaixados = "N",
+            AcessoRegistros = "N",
+            AcessoEmpresas = "N",
+            AcessoConfiguracao = "N",
+            AcessoImportacao = "N",
+            AcessoBaixarXml = "N",
+            Inativo = "N"
+        };
+        usuarioPadrao.SenhaHash = hasher.HashPassword(usuarioPadrao, "Ag1ll32017");
+
+        await usuarioRepository.IncluirAsync(usuarioPadrao);
+    }
+}
 
 app.Run();

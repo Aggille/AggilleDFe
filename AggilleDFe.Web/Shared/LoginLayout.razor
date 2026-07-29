@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+@using AggilleDFe.Web.Services
+@inject ThemeService Theme
+
+<MudThemeProvider IsDarkMode="@Theme.IsDarkMode" />
+<MudPopoverProvider />
+<MudSnackbarProvider />
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex justify-center align-center" Style="min-height: 100vh;">
+    @Body
+</MudContainer>
+
+@code {
+    protected override async Task OnInitializedAsync() => await Theme.InitializeAsync();
+}

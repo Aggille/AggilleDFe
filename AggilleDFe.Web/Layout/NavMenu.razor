@@ -1,23 +1,38 @@
 <MudNavMenu>
-    @foreach (var item in _itens)
-    {
-        <MudNavLink Href="@item.Rota" Icon="@item.Icone" Match="NavLinkMatch.Prefix">
-            @item.Label
-        </MudNavLink>
-    }
+    <AuthorizeView>
+        <Authorized>
+            <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">Home</MudNavLink>
+
+            @foreach (var item in _itens)
+            {
+                if (item.Permissao is null || context.User.HasClaim("permissao", item.Permissao))
+                {
+                    <MudNavLink Href="@item.Rota" Icon="@item.Icone" Match="NavLinkMatch.Prefix">
+                        @item.Label
+                    </MudNavLink>
+                }
+            }
+
+            @if (context.User.HasClaim("administrador", "true"))
+            {
+                <MudNavLink Href="/usuarios" Icon="@Icons.Material.Filled.People" Match="NavLinkMatch.Prefix">
+                    Usuários
+                </MudNavLink>
+            }
+        </Authorized>
+    </AuthorizeView>
 </MudNavMenu>
 
 @code {
-    private record ItemMenu(string Label, string Rota, string Icone);
+    private record ItemMenu(string Label, string Rota, string Icone, string? Permissao);
 
     private static readonly ItemMenu[] _itens =
     [
-        new("Home",           "/",                Icons.Material.Filled.Home),
-        new("Empresas",       "/empresas",        Icons.Material.Filled.Business),
-        new("Configuração",   "/configuracao",    Icons.Material.Filled.Settings),
-        new("Registros",      "/registros",       Icons.Material.Filled.History),
-        new("Baixar XMLs",    "/baixar-xmls",     Icons.Material.Filled.CloudDownload),
-        new("XMLS Baixados",  "/xmls-baixados",   Icons.Material.Filled.FolderZip),
-        new("Importar XMLs",  "/importar-xmls",   Icons.Material.Filled.UploadFile),
+        new("Empresas",       "/empresas",        Icons.Material.Filled.Business,      "empresas"),
+        new("Configuração",   "/configuracao",    Icons.Material.Filled.Settings,      "configuracao"),
+        new("Registros",      "/registros",       Icons.Material.Filled.History,       "registros"),
+        new("Baixar XMLs",    "/baixar-xmls",     Icons.Material.Filled.CloudDownload, "baixar-xml"),
+        new("XMLS Baixados",  "/xmls-baixados",   Icons.Material.Filled.FolderZip,     "xmls-baixados"),
+        new("Importar XMLs",  "/importar-xmls",   Icons.Material.Filled.UploadFile,    "importacao"),
     ];
 }

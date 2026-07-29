@@ -1,0 +1,62 @@
+@page "/login"
+@layout AggilleDFe.Web.Shared.LoginLayout
+@attribute [AllowAnonymous]
+@using AggilleDFe.Web.Services
+@inject AutenticacaoService AutenticacaoService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Login</PageTitle>
+
+<MudPaper Class="pa-8" Elevation="4" Style="width: 100%; max-width: 380px;">
+    <MudText Typo="Typo.h5" Class="mb-1" Align="Align.Center">AggilleDFe</MudText>
+    <MudText Typo="Typo.body2" Class="mb-6" Align="Align.Center" Color="Color.Secondary">
+        Entre com seu login e senha
+    </MudText>
+
+    <MudTextField @bind-Value="_login" Label="Login" Variant="Variant.Outlined" Class="mb-4"
+                  Immediate="true" OnKeyDown="@(e => { if (e.Key == "Enter") { _ = EntrarAsync(); } })" />
+    <MudTextField @bind-Value="_senha" Label="Senha" Variant="Variant.Outlined" InputType="InputType.Password" Class="mb-6"
+                  Immediate="true" OnKeyDown="@(e => { if (e.Key == "Enter") { _ = EntrarAsync(); } })" />
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+               OnClick="EntrarAsync" Disabled="_entrando">
+        Entrar
+    </MudButton>
+</MudPaper>
+
+@code {
+    private string _login = string.Empty;
+    private string _senha = string.Empty;
+    private bool _entrando;
+
+    private async Task EntrarAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_login) || string.IsNullOrWhiteSpace(_senha))
+        {
+            Snackbar.Add("Informe login e senha.", Severity.Warning);
+            return;
+        }
+
+        _entrando = true;
+        try
+        {
+            var sucesso = await AutenticacaoService.EntrarAsync(_login, _senha);
+            if (sucesso)
+            {
+                NavigationManager.NavigateTo("/");
+                return;
+            }
+
+            Snackbar.Add("Usuário ou senha inválidos.", Severity.Error);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+        finally
+        {
+            _entrando = false;
+        }
+    }
+}

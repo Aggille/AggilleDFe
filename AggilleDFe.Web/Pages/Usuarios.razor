@@ -1,0 +1,135 @@
+@page "/usuarios"
+@attribute [Authorize(Policy = "Administrador")]
+@using AggilleDFe.Application.DTOs
+@using AggilleDFe.Web.Dialogs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Usuários</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Usuários</MudText>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-4" Wrap="Wrap.Wrap" Spacing="2">
+        <MudStack Row="true" Spacing="2">
+            <MudTextField @bind-Value="_busca" Label="Pesquisar por login ou nome" Variant="Variant.Outlined" Immediate="true"
+                          Style="width: 480px" OnKeyDown="@(e => { if (e.Key == "Enter") { _ = Pesquisar(); } })" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search" OnClick="Pesquisar" Disabled="_carregando">
+                Pesquisar
+            </MudButton>
+        </MudStack>
+        <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AbrirDialogo(ModoDialogoUsuario.Incluir, null))">
+            Incluir Usuário
+        </MudButton>
+    </MudStack>
+
+    <MudDataGrid Items="_usuarios" Loading="_carregando">
+        <Columns>
+            <PropertyColumn Property="x => x.Login" Title="Login" />
+            <PropertyColumn Property="x => x.Nome" Title="Nome" />
+            <TemplateColumn Title="Administrador">
+                <CellTemplate>
+                    @(context.Item.Administrador ? "Sim" : "Não")
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Inativo">
+                <CellTemplate>
+                    @(context.Item.Inativo ? "Sim" : "Não")
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Ações" Sortable="false">
+                <CellTemplate>
+                    <MudTooltip Text="Alterar">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => AbrirDialogo(ModoDialogoUsuario.Alterar, context.Item.Id))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Excluir">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="@(() => ExcluirAsync(context.Item))" />
+                    </MudTooltip>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            Nenhum usuário encontrado.
+        </NoRecordsContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    private IEnumerable<UsuarioDto> _usuarios = [];
+    private string? _busca;
+    private bool _carregando;
+
+    protected override async Task OnInitializedAsync() => await Pesquisar();
+
+    private async Task Pesquisar()
+    {
+        _carregando = true;
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(_busca)
+                ? "api/v1/usuarios"
+                : $"api/v1/usuarios?busca={Uri.EscapeDataString(_busca)}";
+
+            var resultado = await Http.GetFromJsonAsync<List<UsuarioDto>>(url);
+            _usuarios = resultado ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API para pesquisar usuários.", Severity.Warning);
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+
+    private async Task AbrirDialogo(ModoDialogoUsuario modo, int? usuarioId)
+    {
+        var parametros = new DialogParameters<UsuarioDialog>
+        {
+            { x => x.Modo, modo },
+            { x => x.UsuarioId, usuarioId }
+        };
+        var opcoes = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true };
+
+        var dialogo = await DialogService.ShowAsync<UsuarioDialog>(null, parametros, opcoes);
+        var resultado = await dialogo.Result;
+
+        if (resultado is { Canceled: false })
+        {
+            await Pesquisar();
+        }
+    }
+
+    private async Task ExcluirAsync(UsuarioDto usuario)
+    {
+        var confirmado = await DialogService.ShowMessageBoxAsync(
+            "Excluir Usuário",
+            $"Tem certeza que deseja excluir o usuário \"{usuario.Login}\"? Essa ação não pode ser desfeita.",
+            yesText: "Excluir", cancelText: "Cancelar");
+
+        if (confirmado != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var resposta = await Http.DeleteAsync($"api/v1/usuarios/{usuario.Id}");
+            if (resposta.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Usuário excluído com sucesso.", Severity.Success);
+                await Pesquisar();
+            }
+            else
+            {
+                Snackbar.Add("Não foi possível excluir o usuário.", Severity.Error);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+    }
+}

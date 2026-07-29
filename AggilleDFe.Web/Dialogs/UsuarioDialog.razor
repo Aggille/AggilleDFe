@@ -1,0 +1,155 @@
+@using System.Net
+@using System.Net.Http.Json
+@using AggilleDFe.Application.DTOs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>@Titulo</TitleContent>
+    <DialogContent>
+        <div style="width: 100%; min-height: 320px;">
+        @if (_carregando)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <MudGrid Class="mt-2">
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.Login" Label="Login" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.Nome" Label="Nome" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.Senha" Label="Senha" Variant="Variant.Outlined" InputType="InputType.Password"
+                                  HelperText="@(Modo == ModoDialogoUsuario.Alterar ? "Deixe em branco para manter a senha atual" : null)" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSwitch @bind-Value="_model.Administrador" Color="Color.Primary" Label="Administrador (acesso à manutenção de Usuários)" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Acesso aos módulos</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_model.AcessoEmpresas" Color="Color.Primary" Label="Empresas" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_model.AcessoConfiguracao" Color="Color.Primary" Label="Configuração" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_model.AcessoRegistros" Color="Color.Primary" Label="Registros" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_model.AcessoBaixarXml" Color="Color.Primary" Label="Baixar XMLs" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_model.AcessoXmlsBaixados" Color="Color.Primary" Label="XMLS Baixados" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_model.AcessoImportacao" Color="Color.Primary" Label="Importar XMLs" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSwitch @bind-Value="_model.Inativo" Color="Color.Warning" Label="Inativo" />
+                </MudItem>
+            </MudGrid>
+        }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Fechar">Cancelar</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="Salvar" Disabled="_salvando">Salvar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public ModoDialogoUsuario Modo { get; set; } = ModoDialogoUsuario.Incluir;
+    [Parameter] public int? UsuarioId { get; set; }
+
+    private UsuarioDto _model = new();
+    private bool _salvando;
+    private bool _carregando;
+
+    private string Titulo => Modo == ModoDialogoUsuario.Alterar ? "Alterar Usuário" : "Incluir Usuário";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Modo == ModoDialogoUsuario.Incluir || UsuarioId is null)
+        {
+            return;
+        }
+
+        _carregando = true;
+        try
+        {
+            var dados = await Http.GetFromJsonAsync<UsuarioDto>($"api/v1/usuarios/{UsuarioId}");
+            if (dados is not null)
+            {
+                _model = dados;
+                _model.Senha = null;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API para carregar o usuário.", Severity.Warning);
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+
+    private async Task Salvar()
+    {
+        _salvando = true;
+        try
+        {
+            var resposta = Modo == ModoDialogoUsuario.Alterar
+                ? await Http.PutAsJsonAsync($"api/v1/usuarios/{UsuarioId}", _model)
+                : await Http.PostAsJsonAsync("api/v1/usuarios", _model);
+
+            if (resposta.IsSuccessStatusCode)
+            {
+                Snackbar.Add(Modo == ModoDialogoUsuario.Alterar ? "Usuário atualizado com sucesso." : "Usuário incluído com sucesso.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+                return;
+            }
+
+            if (resposta.StatusCode == HttpStatusCode.BadRequest)
+            {
+                var problema = await resposta.Content.ReadFromJsonAsync<ProblemaDeValidacao>();
+                if (problema?.Errors is not null)
+                {
+                    foreach (var mensagens in problema.Errors.Values)
+                    {
+                        foreach (var mensagem in mensagens)
+                        {
+                            Snackbar.Add(mensagem, Severity.Error);
+                        }
+                    }
+                }
+                return;
+            }
+
+            Snackbar.Add("Não foi possível salvar o usuário.", Severity.Error);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+
+    private void Fechar() => MudDialog.Cancel();
+
+    private class ProblemaDeValidacao
+    {
+        public Dictionary<string, string[]>? Errors { get; set; }
+    }
+}
