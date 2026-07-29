@@ -185,9 +185,10 @@ cada push na `main` (ou disparo manual via aba Actions), como
 `ghcr.io/aggille/aggilledfe-api:latest` (e `:worker`/`:web`, com tag extra
 pelo SHA do commit).
 
-No servidor de destino (Linux, já com Docker instalado), não precisa clonar
-o repositório inteiro — só copiar `docker-compose.prod.yml` e `.env`
-(preenchido a partir do `.env.example`, mesmas variáveis do compose normal):
+No servidor de destino (Linux ou Windows, já com Docker instalado), não
+precisa clonar o repositório inteiro — só copiar `docker-compose.prod.yml` e
+`.env` (preenchido a partir do `.env.example`, mesmas variáveis do compose
+normal):
 
 ```bash
 docker login ghcr.io -u <usuario-github> -p <personal-access-token>   # escopo read:packages
@@ -199,6 +200,11 @@ O PAT (`personal access token`) precisa do escopo `read:packages`; se o
 repositório for privado, o pacote publicado também nasce privado — gere o
 token numa conta com acesso ao repositório/organização. Pra atualizar depois
 de uma nova publicação, ver seção "Atualizando os containers" abaixo.
+
+**No Windows**, `docker-instalar-windows.bat` (raiz do repositório) faz essa
+primeira subida (confere `.env`/`docker-compose.prod.yml`, pergunta se
+precisa logar no GHCR, dá `pull` + `up -d`) — copie ele junto com
+`docker-compose.prod.yml` e `.env` pra pasta de destino e rode.
 
 As mesmas observações de volumes de certificados/XMLs, caminhos dentro do
 container e ausência de TLS (seções acima) valem também para o
@@ -256,6 +262,12 @@ Pro servidor do cliente específico já cadastrado (`172.16.0.3`), esses três
 comandos (mais a cópia do `docker-compose.prod.yml`) já estão
 automatizados no `update-cliente.bat` da raiz do repositório — só rodar
 esse `.bat`, que ele pede a senha do `root` via SSH/SCP quando precisar.
+
+Pra atualizar direto **numa máquina Windows** (sem SSH — rodando o `.bat`
+localmente nela), use `docker-atualizar-windows.bat` (mesma pasta do
+`docker-instalar-windows.bat` — `pull` + `up -d --force-recreate` +
+`docker image prune -f`, com dica do comando de `docker login` se o pull
+falhar por token expirado).
 
 ### Migrations na atualização
 

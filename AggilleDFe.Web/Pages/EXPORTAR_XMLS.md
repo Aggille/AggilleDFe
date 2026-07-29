@@ -17,7 +17,10 @@
 - Seletor "Filtrar pela data de": Emissão do documento (padrão) ou Download
   (data em que a plataforma baixou o XML) — vira o parâmetro
   `usarDataDownload` no endpoint
-- Botão "Exportar":
+- Botão "Exportar" (desabilitado enquanto `_exportando` é true, com
+  `MudProgressCircular` indeterminado + texto "Compactando os XMLs,
+  aguarde..." ao lado — o zip pode levar alguns segundos num período com
+  muitos documentos):
   1. Chama `GET /api/v1/xmls/exportar-zip?ano=&mes=&empresaId=&usarDataDownload=` via
      `HttpClient` só pra conferir se deu certo (mostra o erro num Snackbar
      se não achar nada no período/empresa, em vez de abrir uma aba com

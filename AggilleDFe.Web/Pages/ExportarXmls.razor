@@ -3,7 +3,7 @@
 @using AggilleDFe.Application.DTOs
 @inject HttpClient Http
 @inject ISnackbar Snackbar
-@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
 <PageTitle>Exportar XMLs</PageTitle>
 
@@ -45,10 +45,17 @@
         </MudItem>
     </MudGrid>
 
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Archive"
-               Class="mt-4" OnClick="ExportarAsync" Disabled="_exportando">
-        Exportar
-    </MudButton>
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-4" Spacing="3">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Archive"
+                   OnClick="ExportarAsync" Disabled="_exportando">
+            Exportar
+        </MudButton>
+        @if (_exportando)
+        {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Compactando os XMLs, aguarde...</MudText>
+        }
+    </MudStack>
 </MudPaper>
 
 @code {
@@ -89,7 +96,13 @@
             var resposta = await Http.GetAsync(url);
             if (resposta.IsSuccessStatusCode)
             {
-                NavigationManager.NavigateTo($"{Http.BaseAddress}{url}", forceLoad: true);
+                var nomeArquivo = resposta.Content.Headers.ContentDisposition?.FileNameStar
+                    ?? resposta.Content.Headers.ContentDisposition?.FileName
+                    ?? $"XMLs_{_ano:D4}-{_mes:D2}.zip";
+
+                await using var conteudo = await resposta.Content.ReadAsStreamAsync();
+                using var streamRef = new DotNetStreamReference(conteudo);
+                await JS.InvokeVoidAsync("downloadFileFromStream", nomeArquivo, streamRef);
                 return;
             }
 
