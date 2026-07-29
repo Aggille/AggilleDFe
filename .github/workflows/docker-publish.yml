@@ -18,6 +18,10 @@ jobs:
       contents: read
       packages: write
     strategy:
+      # Sem isso, quando um servico falha os outros aparecem como
+      # "cancelled" em vez de rodar ate o fim - dificulta ver se so um
+      # Dockerfile tem problema ou se e algo comum aos tres.
+      fail-fast: false
       matrix:
         include:
           - service: api
@@ -29,6 +33,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Configura o Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login no GHCR
         uses: docker/login-action@v3
@@ -43,6 +50,14 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
+          # O driver "docker" padrao (sem builder Buildx configurado) nao
+          # suporta atestacao de proveniencia/SBOM, que o build-push-action
+          # v6 tenta gerar por padrao ao dar push - isso fazia o push falhar
+          # silenciosamente mesmo com o build em si correto. O setup-buildx
+          # acima ja resolveria sozinho, mas desligar aqui tambem deixa
+          # explicito que nao precisamos dessas atestacoes.
+          provenance: false
+          sbom: false
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}-${{ matrix.service }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}-${{ matrix.service }}:${{ github.sha }}
