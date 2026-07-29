@@ -8,6 +8,20 @@ REM
 REM  Pre-requisito: as imagens novas ja precisam estar publicadas no GHCR
 REM  (ver DOCKER.md - "docker compose build" + "docker compose push", ou
 REM  aguardar o workflow do GitHub Actions).
+REM
+REM  Pre-requisito 2: os pacotes no GHCR (aggilledfe-api/worker/web) sao
+REM  PRIVADOS - o "docker compose pull" abaixo so funciona se o servidor ja
+REM  tiver feito "docker login ghcr.io" com um token valido. Se o pull falhar
+REM  com "denied: denied" (token expirado/revogado ou nunca logado), conecte
+REM  no servidor via SSH e rode, uma vez so, com um Personal Access Token do
+REM  GitHub com escopo read:packages (pode ser o mesmo valor do secret
+REM  GHCR_TOKEN do repositorio, que ja tem esse escopo):
+REM
+REM    ** RODAR DENTRO DO SERVIDOR CO CLIENTE
+REM    docker login ghcr.io -u Aggille -p SEU_PERSONAL_ACCESS_TOKEN_AQUI
+REM
+REM  O login fica salvo no servidor (~/.docker/config.json do usuario root) -
+REM  so precisa repetir se o token for revogado/expirar.
 REM ============================================================================
 
 set SERVIDOR=172.16.0.3
