@@ -15,13 +15,14 @@
 - ACESSO_CONFIGURACAO VARCHAR(1), -- S/N
 - ACESSO_IMPORTACAO VARCHAR(1), -- S/N
 - ACESSO_BAIXAR_XML VARCHAR(1), -- S/N
+- ACESSO_EXPORTAR_XMLS VARCHAR(1), -- S/N — tela "Exportar XMLs" (zip de NFe/CTe do período), separada de ACESSO_BAIXAR_XML (que é o download via SEFAZ) e de ACESSO_XMLS_BAIXADOS (grid de visualização)
 - INATIVO VARCHAR(1) -- S/N, mesmo padrão de EMPRESAS.INATIVO — desativa sem excluir
 
 # Observações
 
 - Usuário padrão `aggille` é semeado automaticamente pela API na primeira
   subida (`Program.cs`, só se a tabela estiver vazia), com
-  `ADMINISTRADOR = 'S'` e as 6 permissões de módulo em `'N'` — só enxerga a
+  `ADMINISTRADOR = 'S'` e as 7 permissões de módulo em `'N'` — só enxerga a
   tela de manutenção de Usuários. Senha inicial `Ag1ll32017`, já em hash.
 - O login feito pelo Blazor Web hoje só é validado no front-end (nenhuma tela
   do Blazor abre sem token válido) — os demais endpoints internos da API

@@ -45,6 +45,7 @@ public class AutenticacaoService(IUsuarioRepository repository, IOptions<JwtOpti
         AdicionarClaimPermissao(claims, "configuracao", usuario.AcessoConfiguracao);
         AdicionarClaimPermissao(claims, "importacao", usuario.AcessoImportacao);
         AdicionarClaimPermissao(claims, "baixar-xml", usuario.AcessoBaixarXml);
+        AdicionarClaimPermissao(claims, "exportar-xmls", usuario.AcessoExportarXmls);
 
         var chave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(opcoes.Key));
         var credenciais = new SigningCredentials(chave, SecurityAlgorithms.HmacSha256);
@@ -68,7 +69,8 @@ public class AutenticacaoService(IUsuarioRepository repository, IOptions<JwtOpti
             AcessoEmpresas = usuario.AcessoEmpresas == "S",
             AcessoConfiguracao = usuario.AcessoConfiguracao == "S",
             AcessoImportacao = usuario.AcessoImportacao == "S",
-            AcessoBaixarXml = usuario.AcessoBaixarXml == "S"
+            AcessoBaixarXml = usuario.AcessoBaixarXml == "S",
+            AcessoExportarXmls = usuario.AcessoExportarXmls == "S"
         };
     }
 

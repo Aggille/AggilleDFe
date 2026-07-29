@@ -71,6 +71,15 @@ public static class XmlEndpoints
         })
         .WithSummary("Varre uma pasta (recursivamente) e importa os XMLs (nfeProc/cteProc) ainda não cadastrados, associando pela empresa com o CNPJ do emitente");
 
+        group.MapGet("/exportar-zip", async (int ano, int mes, int? empresaId, bool usarDataDownload, IXmlExportService xmlExportService) =>
+        {
+            var (zip, nomeArquivo, erro) = await xmlExportService.ExportarZipAsync(ano, mes, empresaId, usarDataDownload);
+            return zip is not null
+                ? Results.File(zip, "application/zip", nomeArquivo)
+                : Results.BadRequest(new { erro });
+        })
+        .WithSummary("Gera um ZIP com os XMLs de NFe/CTe já armazenados (banco/disco) de um mês/ano, opcionalmente filtrado por empresa e pelo tipo de data (usarDataDownload=false filtra por emissão, true por data de download) — uso interno da tela Exportar XMLs, sem autenticação (Basic é só para a API externa, /api/v1/dfe/*)");
+
         return app;
     }
 }

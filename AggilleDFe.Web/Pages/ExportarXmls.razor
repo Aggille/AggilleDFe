@@ -1,0 +1,113 @@
+@page "/exportar-xmls"
+@attribute [Authorize(Policy = "ExportarXmls")]
+@using AggilleDFe.Application.DTOs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Exportar XMLs</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Exportar XMLs</MudText>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudText Typo="Typo.body2" Class="mb-4" Color="Color.Secondary">
+        Gera um arquivo .zip com os XMLs de NFe e CTe já baixados (armazenados no
+        banco ou em disco) do mês/ano informado, pra salvar na sua máquina. Não
+        consulta a SEFAZ — só empacota o que já foi baixado.
+    </MudText>
+
+    <MudGrid>
+        <MudItem xs="12" sm="5">
+            <MudSelect T="int?" @bind-Value="_empresaId" Label="Empresa" Variant="Variant.Outlined" Clearable="true">
+                <MudSelectItem T="int?" Value="null">Todas as empresas</MudSelectItem>
+                @foreach (var empresa in _empresas)
+                {
+                    <MudSelectItem T="int?" Value="empresa.Id">@empresa.RazaoSocial</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int" @bind-Value="_mes" Label="Mês" Variant="Variant.Outlined">
+                @foreach (var mes in Meses)
+                {
+                    <MudSelectItem T="int" Value="mes.Numero">@mes.Nome</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudNumericField @bind-Value="_ano" Label="Ano" Variant="Variant.Outlined" Min="2000" Max="2100" />
+        </MudItem>
+        <MudItem xs="12" sm="5">
+            <MudSelect T="bool" @bind-Value="_usarDataDownload" Label="Filtrar pela data de" Variant="Variant.Outlined">
+                <MudSelectItem T="bool" Value="false">Emissão do documento</MudSelectItem>
+                <MudSelectItem T="bool" Value="true">Download (quando a plataforma baixou)</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Archive"
+               Class="mt-4" OnClick="ExportarAsync" Disabled="_exportando">
+        Exportar
+    </MudButton>
+</MudPaper>
+
+@code {
+    private static readonly (int Numero, string Nome)[] Meses =
+    [
+        (1, "Janeiro"), (2, "Fevereiro"), (3, "Março"), (4, "Abril"),
+        (5, "Maio"), (6, "Junho"), (7, "Julho"), (8, "Agosto"),
+        (9, "Setembro"), (10, "Outubro"), (11, "Novembro"), (12, "Dezembro")
+    ];
+
+    private List<EmpresaDto> _empresas = [];
+    private int? _empresaId;
+    private int _mes = DateTime.Now.Month;
+    private int _ano = DateTime.Now.Year;
+    private bool _usarDataDownload;
+    private bool _exportando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var resultado = await Http.GetFromJsonAsync<List<EmpresaDto>>("api/v1/empresas");
+            _empresas = resultado ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API para carregar as empresas.", Severity.Warning);
+        }
+    }
+
+    private async Task ExportarAsync()
+    {
+        _exportando = true;
+        try
+        {
+            var url = $"api/v1/xmls/exportar-zip?ano={_ano}&mes={_mes}&usarDataDownload={_usarDataDownload}" + (_empresaId is not null ? $"&empresaId={_empresaId}" : string.Empty);
+
+            var resposta = await Http.GetAsync(url);
+            if (resposta.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo($"{Http.BaseAddress}{url}", forceLoad: true);
+                return;
+            }
+
+            var problema = await resposta.Content.ReadFromJsonAsync<ErroSimples>();
+            Snackbar.Add(problema?.Erro ?? "Não foi possível gerar o arquivo de exportação.", Severity.Warning);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+        finally
+        {
+            _exportando = false;
+        }
+    }
+
+    private class ErroSimples
+    {
+        public string? Erro { get; set; }
+    }
+}

@@ -32,9 +32,9 @@ Senha (obrigatória só no modo Incluir — em branco no Alterar mantém a senha
 atual, o `UsuarioService` só recalcula o hash se vier preenchida), switch
 Administrador (controla só o acesso a essa própria tela, é independente das
 permissões de módulo abaixo), um switch por permissão de módulo (Empresas,
-Configuração, Registros, Baixar XMLs, XMLS Baixados, Importar XMLs — mesmos
-6 itens do `NavMenu`) e switch Inativo (desativa sem excluir, mesmo padrão
-de `Empresa.Inativo`).
+Configuração, Registros, Baixar XMLs, XMLS Baixados, Importar XMLs,
+Exportar XMLs — mesmos 7 itens do `NavMenu`) e switch Inativo (desativa
+sem excluir, mesmo padrão de `Empresa.Inativo`).
 
 O usuário padrão `aggille` (semeado automaticamente na primeira subida da
 API, ver `AggilleDFe.Domain/Entities/USUARIO.md`) nasce só com

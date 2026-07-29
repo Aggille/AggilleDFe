@@ -53,6 +53,7 @@ builder.Services.AddScoped<IManifestacaoService, ManifestacaoService>();
 builder.Services.AddScoped<IDanfeService, DanfeService>();
 builder.Services.AddScoped<IDacteService, DacteService>();
 builder.Services.AddScoped<IXmlImportService, XmlImportService>();
+builder.Services.AddScoped<IXmlExportService, XmlExportService>();
 builder.Services.AddScoped<IEmailNotificacaoService, EmailNotificacaoService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
