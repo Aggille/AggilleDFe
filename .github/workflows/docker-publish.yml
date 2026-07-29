@@ -42,7 +42,11 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # O GITHUB_TOKEN automatico tem um bug conhecido no GHCR: da 403
+          # Forbidden num HEAD de blob durante o push (mesmo com permissao
+          # de pacote em Admin) - troca pra um PAT classico com escopo
+          # write:packages, guardado no secret GHCR_TOKEN.
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build e push da imagem ${{ matrix.service }}
         uses: docker/build-push-action@v6
