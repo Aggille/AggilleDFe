@@ -9,9 +9,16 @@ public class Worker(IServiceScopeFactory scopeFactory, ILogger<Worker> logger) :
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Espera o intervalo configurado ANTES do primeiro ciclo também -
+        // sem isso, toda vez que o Worker é reiniciado (deploy, restart do
+        // container/serviço, etc.) ele dispara um ciclo completo (todas as
+        // empresas elegíveis) na hora, mesmo que o ciclo anterior tenha
+        // rodado há poucos minutos.
+        var proximoCicloEmMinutos = await ObterIntervaloConfiguradoAsync(stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            var proximoCicloEmMinutos = TempoExecucaoPadraoMinutos;
+            await Task.Delay(TimeSpan.FromMinutes(proximoCicloEmMinutos), stoppingToken);
 
             try
             {
@@ -20,10 +27,17 @@ public class Worker(IServiceScopeFactory scopeFactory, ILogger<Worker> logger) :
             catch (Exception ex)
             {
                 logger.LogError(ex, "Falha inesperada no ciclo do Worker.");
+                proximoCicloEmMinutos = TempoExecucaoPadraoMinutos;
             }
-
-            await Task.Delay(TimeSpan.FromMinutes(proximoCicloEmMinutos), stoppingToken);
         }
+    }
+
+    private async Task<int> ObterIntervaloConfiguradoAsync(CancellationToken stoppingToken)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var configuracaoRepository = scope.ServiceProvider.GetRequiredService<IConfiguracaoRepository>();
+        var configuracao = await configuracaoRepository.ObterAsync(stoppingToken);
+        return configuracao?.TempoExecucao is > 0 ? configuracao.TempoExecucao!.Value : TempoExecucaoPadraoMinutos;
     }
 
     private async Task<int> ExecutarCicloAsync(CancellationToken stoppingToken)
