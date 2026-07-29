@@ -81,6 +81,7 @@ internal static class DacteHtmlBuilder
         sb.Append(Campo("Natureza da Operação", ide.natOp));
         sb.Append(Campo("Tipo do Serviço", FormatarTpServ(ide.tpServ)));
         sb.Append(Campo("Forma de Pagamento", FormatarForPag(ide.forPag)));
+        sb.Append(Campo("Tomador do Serviço (quem paga o frete)", FormatarToma(ide.tomaBase3?.toma, ide.toma4)));
         sb.Append("</div>");
     }
 
@@ -205,6 +206,26 @@ internal static class DacteHtmlBuilder
         forPag.Outros => "Outros",
         _ => string.Empty
     };
+
+    private static string FormatarToma(toma? valor, CTe.Classes.Informacoes.Identificacao.toma4? toma4)
+    {
+        var rotulo = valor switch
+        {
+            toma.Remetente => "Remetente",
+            toma.Expedidor => "Expedidor",
+            toma.Recebedor => "Recebedor",
+            toma.Destinatario => "Destinatário",
+            toma.Outros => "Outros",
+            _ => string.Empty
+        };
+
+        if (valor == toma.Outros && toma4 is not null)
+        {
+            rotulo += !string.IsNullOrEmpty(toma4.xNome) ? $" ({toma4.xNome})" : string.Empty;
+        }
+
+        return rotulo;
+    }
 
     private static string Html(string? valor) => WebUtility.HtmlEncode(valor ?? string.Empty);
 

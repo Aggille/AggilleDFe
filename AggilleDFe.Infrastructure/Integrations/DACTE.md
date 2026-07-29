@@ -35,9 +35,14 @@ DFe, ver `DISTRIBUICAO_DFE.md`) — mesma filosofia leve do DANFE em HTML (sem
    número, emissão, chip "CANCELADA" quando aplicável), chave de acesso
    agrupada em blocos de 4 dígitos (sem código de barras — ver limitação
    abaixo), protocolo de autorização, natureza da operação/tipo de serviço/
-   forma de pagamento, remetente/destinatário, percurso (município início/
-   fim, CFOP), componentes do valor da prestação (`vPrest.Comp`) com total,
-   e observações (`compl.xObs`, se houver).
+   forma de pagamento/tomador do serviço, remetente/destinatário, percurso
+   (município início/fim, CFOP), componentes do valor da prestação
+   (`vPrest.Comp`) com total, e observações (`compl.xObs`, se houver).
+   - **Tomador do serviço** (quem paga o frete): `ide.tomaBase3.toma`
+     (enum `CTe.Classes.Informacoes.Tipos.toma` — Remetente/Expedidor/
+     Recebedor/Destinatario/Outros). Quando `Outros`, complementa com o
+     nome de `ide.toma4.xNome` (dados do terceiro pagador) entre
+     parênteses.
 
 ## Limitações conhecidas
 
