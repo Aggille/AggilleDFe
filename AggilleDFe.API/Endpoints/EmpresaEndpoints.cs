@@ -64,6 +64,13 @@ public static class EmpresaEndpoints
             Results.Ok(await distribuicaoLoteService.ExecutarTodasAsync(execucaoManual: true)))
         .WithSummary("Executa manualmente a Distribuição DFe para todas as empresas elegíveis, respeitando Configuracao.ProcessarIndividualmente");
 
+        group.MapPost("/{id:int}/baixar-xml-por-chave", async (int id, BaixarPorChaveDto dto, IDistribuicaoDfeService distribuicaoDfeService) =>
+        {
+            var (resultado, erro) = await distribuicaoDfeService.BaixarPorChaveAsync(id, dto.Chave);
+            return resultado is not null ? Results.Ok(resultado) : Results.BadRequest(new { erro });
+        })
+        .WithSummary("Consulta a SEFAZ pela chave de uma NFe específica (fora do ciclo normal por NSU) e, se localizada, baixa e grava no banco/disco, na empresa informada");
+
         group.MapGet("/consulta-cnpj/{cnpj}", async (string cnpj, ICnpjConsultaService consultaService) =>
         {
             var resultado = await consultaService.ConsultarAsync(cnpj);

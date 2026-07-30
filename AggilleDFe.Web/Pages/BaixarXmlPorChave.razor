@@ -1,0 +1,120 @@
+@page "/baixar-por-chave"
+@attribute [Authorize(Policy = "BaixarPorChave")]
+@using AggilleDFe.Application.DTOs
+@using System.Net.Http.Json
+@using System.Text.Json.Serialization
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<PageTitle>Baixar XML por Chave</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Baixar XML por Chave</MudText>
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Informe a chave de acesso de uma NFe (44 dígitos) e a empresa destinatária já cadastrada — o sistema
+        consulta a SEFAZ especificamente por essa chave (fora do ciclo normal por NSU) e, se encontrada,
+        baixa e grava o XML no banco e na pasta padrão da empresa, do mesmo jeito que a Distribuição DFe automática.
+    </MudText>
+
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudSelect T="int?" @bind-Value="_empresaId" Label="Empresa" Variant="Variant.Outlined">
+                @foreach (var empresa in _empresas)
+                {
+                    <MudSelectItem T="int?" Value="empresa.Id">@empresa.RazaoSocial</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_chave" Label="Chave de Acesso da NFe" Variant="Variant.Outlined"
+                          MaxLength="44" Counter="44" HelperText="44 dígitos numéricos" />
+        </MudItem>
+    </MudGrid>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.VpnKey" Class="mt-4"
+               OnClick="BaixarAsync" Disabled="_baixando">
+        @(_baixando ? "Consultando..." : "Baixar")
+    </MudButton>
+
+    @if (_baixando)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+    }
+
+    @if (_ultimoResultado is not null)
+    {
+        <MudAlert Severity="@(_ultimoResultado.Encontrado ? Severity.Success : Severity.Warning)" Class="mt-4">
+            @_ultimoResultado.Mensagem
+        </MudAlert>
+    }
+</MudPaper>
+
+@code {
+    private List<EmpresaDto> _empresas = [];
+    private int? _empresaId;
+    private string _chave = string.Empty;
+    private bool _baixando;
+    private ResultadoBaixarPorChaveDto? _ultimoResultado;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var resultado = await Http.GetFromJsonAsync<List<EmpresaDto>>("api/v1/empresas");
+            _empresas = resultado ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API para carregar as empresas.", Severity.Warning);
+        }
+    }
+
+    private async Task BaixarAsync()
+    {
+        if (_empresaId is null)
+        {
+            Snackbar.Add("Selecione a empresa.", Severity.Warning);
+            return;
+        }
+
+        var chave = _chave.Trim();
+        if (chave.Length != 44 || !chave.All(char.IsDigit))
+        {
+            Snackbar.Add("Chave de acesso inválida — deve ter 44 dígitos numéricos.", Severity.Warning);
+            return;
+        }
+
+        _baixando = true;
+        _ultimoResultado = null;
+        try
+        {
+            using var httpLongo = new HttpClient { BaseAddress = Http.BaseAddress, Timeout = TimeSpan.FromMinutes(2) };
+            var resposta = await httpLongo.PostAsJsonAsync($"api/v1/empresas/{_empresaId}/baixar-xml-por-chave", new BaixarPorChaveDto { Chave = chave });
+
+            if (resposta.IsSuccessStatusCode)
+            {
+                _ultimoResultado = await resposta.Content.ReadFromJsonAsync<ResultadoBaixarPorChaveDto>();
+                Snackbar.Add(_ultimoResultado?.Mensagem ?? "Consulta concluída.", _ultimoResultado?.Encontrado == true ? Severity.Success : Severity.Warning);
+                return;
+            }
+
+            var problema = await resposta.Content.ReadFromJsonAsync<ErroSimples>();
+            Snackbar.Add(problema?.Erro ?? "Não foi possível baixar o XML.", Severity.Error);
+        }
+        catch (HttpRequestException)
+        {
+            Snackbar.Add("Não foi possível conectar à API.", Severity.Error);
+        }
+        finally
+        {
+            _baixando = false;
+        }
+    }
+
+    private class ErroSimples
+    {
+        [JsonPropertyName("erro")]
+        public string? Erro { get; set; }
+    }
+}

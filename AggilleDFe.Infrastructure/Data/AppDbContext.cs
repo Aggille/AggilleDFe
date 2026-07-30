@@ -141,6 +141,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.AcessoImportacao).HasColumnName("ACESSO_IMPORTACAO").HasMaxLength(1);
             e.Property(x => x.AcessoBaixarXml).HasColumnName("ACESSO_BAIXAR_XML").HasMaxLength(1);
             e.Property(x => x.AcessoExportarXmls).HasColumnName("ACESSO_EXPORTAR_XMLS").HasMaxLength(1);
+            e.Property(x => x.AcessoBaixarPorChave).HasColumnName("ACESSO_BAIXAR_POR_CHAVE").HasMaxLength(1);
             e.Property(x => x.Inativo).HasColumnName("INATIVO").HasMaxLength(1);
             e.HasIndex(x => x.Login).IsUnique();
         });

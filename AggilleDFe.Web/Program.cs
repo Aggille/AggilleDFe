@@ -29,6 +29,7 @@ builder.Services.AddAuthorizationCore(options =>
     options.AddPolicy("Importacao", policy => policy.RequireClaim("permissao", "importacao"));
     options.AddPolicy("BaixarXml", policy => policy.RequireClaim("permissao", "baixar-xml"));
     options.AddPolicy("ExportarXmls", policy => policy.RequireClaim("permissao", "exportar-xmls"));
+    options.AddPolicy("BaixarPorChave", policy => policy.RequireClaim("permissao", "baixar-por-chave"));
 });
 
 builder.Services.AddTransient<TokenAuthorizationHandler>();

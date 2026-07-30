@@ -20,4 +20,5 @@ public class LoginResponseDto
     public bool AcessoImportacao { get; set; }
     public bool AcessoBaixarXml { get; set; }
     public bool AcessoExportarXmls { get; set; }
+    public bool AcessoBaixarPorChave { get; set; }
 }

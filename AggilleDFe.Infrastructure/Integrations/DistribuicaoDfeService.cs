@@ -116,6 +116,112 @@ public class DistribuicaoDfeService(
             cancellationToken);
     }
 
+    /// <summary>
+    /// Baixa uma NFe específica pela chave, sob demanda (tela "Baixar por Chave"),
+    /// em vez de esperar o próximo ciclo de Distribuição DFe por NSU. Usa o mesmo
+    /// serviço SEFAZ (NfeDistDFeInteresse) da rotina automática (ver
+    /// ExecutarNfeAsync), só que passando <c>chNFE</c> em vez de <c>ultNSU</c>/
+    /// <c>nSU</c> — a SEFAZ retorna o(s) item(ns) da distribuição relativos só a
+    /// essa chave, no mesmo formato (resNFe/nfeProc/resEvento/procEventoNFe) já
+    /// tratado por <see cref="ProcessarItemNfeAsync"/>, que é reaproveitado aqui
+    /// sem alterações (mesmo upsert por chave, mesma gravação em disco).
+    /// Não mexe em <c>Empresa.UltimoNsu</c> - essa consulta é independente da
+    /// janela incremental de NSU usada pelo ciclo automático.
+    /// </summary>
+    public async Task<(ResultadoBaixarPorChaveDto? Resultado, string? Erro)> BaixarPorChaveAsync(int empresaId, string chave, CancellationToken cancellationToken = default)
+    {
+        var empresa = await empresaRepository.ObterPorIdAsync(empresaId, cancellationToken);
+        if (empresa is null)
+        {
+            return (null, "Empresa não encontrada.");
+        }
+
+        chave = chave?.Trim() ?? string.Empty;
+        if (chave.Length != 44 || !chave.All(char.IsDigit))
+        {
+            return (null, "Chave de acesso inválida (deve ter 44 dígitos numéricos).");
+        }
+
+        try
+        {
+            var existiaAntes = await xmlRepository.ObterPorChaveAsync(chave, cancellationToken) is not null;
+
+            var certificado = ZeusConfiguracaoFactory.CarregarCertificado(empresa);
+            var diretorioSchemas = configuration["SchemasPath"] ?? "SCHEMAS";
+            var configuracaoNfe = ZeusConfiguracaoFactory.Criar(empresa, diretorioSchemas);
+
+            using var servicoNfe = new ServicosNFe(configuracaoNfe, certificado);
+            var retorno = servicoNfe.NfeDistDFeInteresse(ufAutor: empresa.Uf!, documento: empresa.Cnpj!, ultNSU: string.Empty, nSU: string.Empty, chNFE: chave);
+            var status = retorno.Retorno;
+
+            if (status.cStat == CStatNenhumDocumentoLocalizado)
+            {
+                await LogarAsync(empresa.Id, $"NFe: download manual por chave não encontrou documento para \"{chave}\".", chave: chave, cancellationToken: cancellationToken);
+                return (new ResultadoBaixarPorChaveDto
+                {
+                    Encontrado = false,
+                    Mensagem = "Nenhum documento encontrado para essa chave nessa empresa (confira se a empresa selecionada é realmente a destinatária da NFe)."
+                }, null);
+            }
+
+            if (status.cStat != CStatDocumentosLocalizados)
+            {
+                var mensagemErro = $"SEFAZ retornou cStat {status.cStat} - {status.xMotivo}.";
+                await LogarAsync(empresa.Id, $"NFe: download manual por chave \"{chave}\" - {mensagemErro}", chave: chave, cancellationToken: cancellationToken);
+                if (status.cStat == CStatConsumoIndevido)
+                {
+                    await BloquearPorConsumoIndevidoAsync(empresa, cancellationToken);
+                }
+                return (null, mensagemErro);
+            }
+
+            var itens = status.loteDistDFeInt ?? [];
+            var baixouDocumentoCompleto = false;
+            var apenasResumo = false;
+
+            foreach (var item in itens)
+            {
+                await ProcessarItemNfeAsync(empresa, servicoNfe, item, cancellationToken);
+                if (item.NfeProc is not null)
+                {
+                    baixouDocumentoCompleto = true;
+                }
+                else if (item.ResNFe is not null)
+                {
+                    apenasResumo = true;
+                }
+            }
+
+            var mensagem = baixouDocumentoCompleto
+                ? existiaAntes
+                    ? "XML baixado e atualizado com sucesso (já havia um registro para essa chave)."
+                    : "XML baixado e salvo com sucesso."
+                : apenasResumo
+                    ? "A NFe foi localizada, mas a SEFAZ só disponibilizou o resumo por enquanto — o documento completo ainda não está pronto (tente novamente em alguns minutos)."
+                    : "A consulta encontrou algo relacionado a essa chave (ex.: evento), mas não um XML de NFe completo pra baixar.";
+
+            await LogarAsync(empresa.Id, "NFe: XML baixado manualmente por chave.", chave: chave, cancellationToken: cancellationToken);
+
+            return (new ResultadoBaixarPorChaveDto
+            {
+                Encontrado = true,
+                JaExistia = existiaAntes,
+                DocumentoCompletoBaixado = baixouDocumentoCompleto,
+                Mensagem = mensagem
+            }, null);
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogarAsync(empresa.Id, $"Falha ao baixar XML manualmente por chave \"{chave}\": {ex.Message}", chave: chave, cancellationToken: cancellationToken);
+            return (null, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            await LogarAsync(empresa.Id, $"Falha ao baixar XML manualmente por chave \"{chave}\": {ex.Message}", chave: chave, cancellationToken: cancellationToken);
+            return (null, $"Falha ao baixar XML: {ex.Message}");
+        }
+    }
+
     // ----------------------------------------------------------------------------
     // NFe
     // ----------------------------------------------------------------------------

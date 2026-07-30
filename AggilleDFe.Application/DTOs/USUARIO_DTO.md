@@ -14,13 +14,15 @@ visível só pra quem tem `Administrador = true`.
 - Administrador: bool — controla só o acesso à tela de Usuários, é
   independente das 7 permissões de módulo abaixo
 - AcessoXmlsBaixados, AcessoRegistros, AcessoEmpresas, AcessoConfiguracao,
-  AcessoImportacao, AcessoBaixarXml, AcessoExportarXmls: bool — um por item
-  de menu da tela (ver `AggilleDFe.Web/Layout/NavMenu.razor`); controlam o
-  que aparece no menu e quais rotas o usuário pode abrir no Blazor.
+  AcessoImportacao, AcessoBaixarXml, AcessoExportarXmls, AcessoBaixarPorChave: bool
+  — um por item de menu da tela (ver `AggilleDFe.Web/Layout/NavMenu.razor`);
+  controlam o que aparece no menu e quais rotas o usuário pode abrir no Blazor.
   AcessoExportarXmls é da tela "Exportar XMLs" (zip de NFe/CTe do período,
   ver `AggilleDFe.Infrastructure/Integrations/EXPORTACAO_XMLS.md`) —
   separada de AcessoBaixarXml (download via SEFAZ) e AcessoXmlsBaixados
-  (grid de visualização)
+  (grid de visualização). AcessoBaixarPorChave é da tela "Baixar por Chave"
+  (baixa uma NFe específica sob demanda, ver
+  `AggilleDFe.Infrastructure/Integrations/BAIXAR_POR_CHAVE.md`)
 - Inativo: bool — mesmo padrão de `EmpresaDto.Inativo`, desativa sem excluir
 
 Ver também `AggilleDFe.Domain/Entities/USUARIO.md` (DO) e

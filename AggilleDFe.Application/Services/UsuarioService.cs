@@ -86,6 +86,7 @@ public class UsuarioService(IUsuarioRepository repository) : IUsuarioService
         usuario.AcessoImportacao = dto.AcessoImportacao ? "S" : "N";
         usuario.AcessoBaixarXml = dto.AcessoBaixarXml ? "S" : "N";
         usuario.AcessoExportarXmls = dto.AcessoExportarXmls ? "S" : "N";
+        usuario.AcessoBaixarPorChave = dto.AcessoBaixarPorChave ? "S" : "N";
         usuario.Inativo = dto.Inativo ? "S" : "N";
     }
 
@@ -102,6 +103,7 @@ public class UsuarioService(IUsuarioRepository repository) : IUsuarioService
         AcessoImportacao = usuario.AcessoImportacao == "S",
         AcessoBaixarXml = usuario.AcessoBaixarXml == "S",
         AcessoExportarXmls = usuario.AcessoExportarXmls == "S",
+        AcessoBaixarPorChave = usuario.AcessoBaixarPorChave == "S",
         Inativo = usuario.Inativo == "S"
     };
 
