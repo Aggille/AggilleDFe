@@ -20,6 +20,10 @@
     <PackageReference Include="Zeus.Net.NFe.Danfe.Html" Version="2026.7.16.1250" />
     <PackageReference Include="Zeus.Net.NFe.Danfe.QuestPdf" Version="2026.7.16.1250" />
     <PackageReference Include="Zeus.Net.NFe.NFCe" Version="2026.7.16.1250" />
+    <!-- Converte o HTML do DANFE/DACTE em PDF de verdade, via Chromium headless
+         (ver DANFE.md/DACTE.md/PDF.md) - roda em Linux (Docker), diferente das
+         alternativas do Zeus.Net que dependem de System.Drawing.Common. -->
+    <PackageReference Include="PuppeteerSharp" Version="20.2.4" />
     <!-- Referência direta para forçar a versão do ImageSharp acima da trazida
          transitivamente pelo NetBarcode (dependência do Zeus.Net.NFe.Danfe.Html):
          2.1.1 tem CVEs de severidade alta/moderada já corrigidas na série 2.1.x. -->

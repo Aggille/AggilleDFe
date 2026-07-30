@@ -17,6 +17,8 @@ services:
       POSTGRES_DB: aggilledfe
       POSTGRES_USER: aggilledfe
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no arquivo .env (ver .env.example)}
+    ports:
+      - "55432:5432"
     volumes:
       - aggilledfe-db-data:/var/lib/postgresql/data
     restart: unless-stopped

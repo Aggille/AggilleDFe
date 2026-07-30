@@ -29,19 +29,34 @@ public static class XmlEndpoints
         })
         .WithSummary("Grava (ou regrava) em disco, na pasta configurada da empresa, o XML cujo conteúdo já está no banco — uso interno da tela XMLs Baixados, para quando a gravação automática falhou ou foi para um caminho errado");
 
-        group.MapGet("/{chave}/danfe", async (string chave, IDanfeService danfeService) =>
+        group.MapGet("/{chave}/danfe", async (string chave, IDanfeService danfeService, IHtmlToPdfService pdfService) =>
         {
             var (html, erro) = await danfeService.ObterDanfeHtmlAsync(chave);
-            return html is not null ? Results.Content(html, "text/html") : Results.NotFound(new { erro });
-        })
-        .WithSummary("Retorna o DANFE (HTML, pronto para impressão) de uma NFe pela chave (uso interno da tela XMLs Baixados, sem autenticação — autenticação Basic é só para a API externa, /api/v1/dfe/*)");
+            if (html is null)
+            {
+                return Results.NotFound(new { erro });
+            }
 
-        group.MapGet("/{chave}/dacte", async (string chave, IDacteService dacteService) =>
+            var pdf = await pdfService.ConverterAsync(html);
+            // Sem fileDownloadName de propósito: com ele, o Results.File manda
+            // Content-Disposition "attachment" e o navegador baixa em vez de
+            // exibir o PDF inline no visualizador nativo.
+            return Results.File(pdf, "application/pdf");
+        })
+        .WithSummary("Retorna o DANFE (PDF) de uma NFe pela chave (uso interno da tela XMLs Baixados, sem autenticação — autenticação Basic é só para a API externa, /api/v1/dfe/*)");
+
+        group.MapGet("/{chave}/dacte", async (string chave, IDacteService dacteService, IHtmlToPdfService pdfService) =>
         {
             var (html, erro) = await dacteService.ObterDacteHtmlAsync(chave);
-            return html is not null ? Results.Content(html, "text/html") : Results.NotFound(new { erro });
+            if (html is null)
+            {
+                return Results.NotFound(new { erro });
+            }
+
+            var pdf = await pdfService.ConverterAsync(html);
+            return Results.File(pdf, "application/pdf");
         })
-        .WithSummary("Retorna o DACTE (HTML, pronto para impressão, layout próprio) de um CTe pela chave (uso interno da tela XMLs Baixados, sem autenticação — autenticação Basic é só para a API externa, /api/v1/dfe/*)");
+        .WithSummary("Retorna o DACTE (PDF, layout próprio) de um CTe pela chave (uso interno da tela XMLs Baixados, sem autenticação — autenticação Basic é só para a API externa, /api/v1/dfe/*)");
 
         group.MapPost("/{chave}/manifestacao/ciencia", async (string chave, IManifestacaoService manifestacaoService) =>
         {

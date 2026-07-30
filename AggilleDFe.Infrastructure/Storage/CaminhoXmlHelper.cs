@@ -23,4 +23,22 @@ internal static class CaminhoXmlHelper
         File.WriteAllText(caminho, conteudoXml);
         return caminho;
     }
+
+    /// <summary>
+    /// Mesma gravação de <see cref="GravarArquivo"/>, só que sem propagar exceção -
+    /// usada pelos fluxos (Distribuição DFe, Importação) onde uma falha de disco
+    /// (permissão, caminho errado, disco cheio) não pode impedir o registro no
+    /// banco. Chamador loga <c>Erro</c> quando não nulo.
+    /// </summary>
+    public static (string? Caminho, string? Erro) TentarGravarArquivo(string? pastaBase, string cnpj, DateTime dataEmissao, string tipoDocumento, string chave, string conteudoXml)
+    {
+        try
+        {
+            return (GravarArquivo(pastaBase, cnpj, dataEmissao, tipoDocumento, chave, conteudoXml), null);
+        }
+        catch (Exception ex)
+        {
+            return (null, ex.Message);
+        }
+    }
 }

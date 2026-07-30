@@ -295,7 +295,7 @@ public class DistribuicaoDfeService(
         var chave = infProt.chNFe;
 
         var conteudoXml = Compressao.Unzip(item.XmlNfe);
-        var (caminho, erroDisco) = TentarSalvarXmlEmDisco(empresa.PastaXml, empresa.Cnpj!, infNFe.ide.dhEmi.DateTime, "NFe", chave, conteudoXml);
+        var (caminho, erroDisco) = Storage.CaminhoXmlHelper.TentarGravarArquivo(empresa.PastaXml, empresa.Cnpj!, infNFe.ide.dhEmi.DateTime, "NFe", chave, conteudoXml);
 
         var xml = await xmlRepository.ObterPorChaveAsync(chave, cancellationToken);
         var novo = xml is null;
@@ -457,7 +457,7 @@ public class DistribuicaoDfeService(
         var infProt = doc.protCTe.infProt;
         var chave = infProt.chCTe;
 
-        var (caminho, erroDisco) = TentarSalvarXmlEmDisco(empresa.PastaXml, empresa.Cnpj!, infCte.ide.dhEmi.DateTime, "CTe", chave, conteudoXml);
+        var (caminho, erroDisco) = Storage.CaminhoXmlHelper.TentarGravarArquivo(empresa.PastaXml, empresa.Cnpj!, infCte.ide.dhEmi.DateTime, "CTe", chave, conteudoXml);
 
         var xml = await xmlRepository.ObterPorChaveAsync(chave, cancellationToken);
         var novo = xml is null;
@@ -553,25 +553,6 @@ public class DistribuicaoDfeService(
     // ----------------------------------------------------------------------------
     // Auxiliares
     // ----------------------------------------------------------------------------
-
-    /// <summary>
-    /// Tenta gravar o XML em disco sem nunca lançar exceção — a gravação em disco é
-    /// "best effort": o conteúdo já vai para o banco (Xml.ConteudoXml) independente do
-    /// resultado, então uma falha aqui (permissão, caminho errado, disco cheio) não pode
-    /// derrubar o processamento do item nem impedir o registro no banco. Chamador loga
-    /// <c>Erro</c> quando não nulo.
-    /// </summary>
-    private static (string? Caminho, string? Erro) TentarSalvarXmlEmDisco(string? pastaBase, string cnpj, DateTime dataEmissao, string tipoDocumento, string chave, string conteudoXml)
-    {
-        try
-        {
-            return (Storage.CaminhoXmlHelper.GravarArquivo(pastaBase, cnpj, dataEmissao, tipoDocumento, chave, conteudoXml), null);
-        }
-        catch (Exception ex)
-        {
-            return (null, ex.Message);
-        }
-    }
 
     private async Task LogarAsync(
         int? empresaId,

@@ -1,13 +1,13 @@
-# DACTE em HTML (DacteService)
+# DACTE em PDF (DacteService)
 
 Serviço (`DacteService`, em
-`AggilleDFe.Infrastructure/Integrations/DacteService.cs`) que gera o DACTE de
-um CTe já baixado, pela chave, em **HTML pronto para impressão** — exposto em
+`AggilleDFe.Infrastructure/Integrations/DacteService.cs`) que monta o HTML do
+DACTE de um CTe já baixado, pela chave — exposto em
 `GET /api/v1/xmls/{chave}/dacte` (uso interno, sem autenticação, botão "Ver
 DACTE" da tela XMLs Baixados, abre em nova aba via
-`IJSRuntime.InvokeVoidAsync("open", url, "_blank")`; o usuário imprime ou
-salva como PDF pelo próprio navegador, Ctrl+P) — mesmo padrão do DANFE de
-NF-e (`DanfeService`/`DANFE.md`).
+`IJSRuntime.InvokeVoidAsync("open", url, "_blank")`). Assim como o DANFE de
+NF-e (`DanfeService`/`DANFE.md`), o endpoint converte esse HTML em **PDF de
+verdade** via `PuppeteerHtmlToPdfService` (ver `PDF.md`) antes de devolver.
 
 ## Por que layout próprio, sem pacote pronto
 

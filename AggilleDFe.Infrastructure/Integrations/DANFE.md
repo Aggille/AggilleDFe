@@ -1,14 +1,16 @@
-# DANFE em HTML (DanfeService)
+# DANFE em PDF (DanfeService)
 
 Serviço (`DanfeService`, em
-`AggilleDFe.Infrastructure/Integrations/DanfeService.cs`) que gera o DANFE de
-uma NFe já baixada, pela chave, em **HTML pronto para impressão** — exposto
-em `GET /api/v1/xmls/{chave}/danfe` (uso interno, sem autenticação, botão
-"Ver DANFE" da tela XMLs Baixados, abre em nova aba via
-`IJSRuntime.InvokeVoidAsync("open", url, "_blank")`; o usuário imprime ou
-salva como PDF pelo próprio navegador, Ctrl+P).
+`AggilleDFe.Infrastructure/Integrations/DanfeService.cs`) que monta o HTML do
+DANFE de uma NFe já baixada, pela chave — exposto em
+`GET /api/v1/xmls/{chave}/danfe` (uso interno, sem autenticação, botão "Ver
+DANFE" da tela XMLs Baixados, abre em nova aba via
+`IJSRuntime.InvokeVoidAsync("open", url, "_blank")`). O endpoint converte
+esse HTML em **PDF de verdade** antes de devolver, via
+`PuppeteerHtmlToPdfService` (ver `PDF.md`) — não é mais "HTML pra imprimir
+com Ctrl+P".
 
-## Por que HTML, e não PDF direto
+## Por que HTML por dentro, e PDF via Chromium (não os pacotes de PDF do Zeus.Net)
 
 O pacote Zeus.Net já usado no projeto para NFC-e/relatórios
 (`Zeus.Net.NFe.Danfe.QuestPdf`) **não** gera o DANFE completo (A4) de NF-e —
@@ -19,7 +21,14 @@ As alternativas do próprio Zeus.Net com DANFE completo de NF-e em PDF
 funciona em Windows — quebraria a exigência do projeto de rodar em
 Linux/Docker (`CLAUDE.md`). `Zeus.Net.NFe.Danfe.Html` (usado aqui) não tem
 essa dependência — só `NetBarcode` (código de barras 100% gerenciado) — e
-funciona em qualquer SO. Decisão confirmada com o usuário.
+funciona em qualquer SO.
+
+Por isso o HTML gerado pelo Zeus.Net continua sendo a fonte da formatação
+(layout do DANFE), mas a resposta final do endpoint é PDF: o
+`PuppeteerHtmlToPdfService` roda um Chromium headless (100% Linux-compatível,
+sem `System.Drawing.Common`) que renderiza esse HTML e exporta PDF, evitando
+a impressão via navegador do usuário (que ficava ruim/inconsistente entre
+navegadores).
 
 ## Vulnerabilidade de dependência transitiva corrigida
 

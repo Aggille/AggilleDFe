@@ -52,6 +52,7 @@ builder.Services.AddScoped<IXmlArquivoService, XmlArquivoService>();
 builder.Services.AddScoped<IManifestacaoService, ManifestacaoService>();
 builder.Services.AddScoped<IDanfeService, DanfeService>();
 builder.Services.AddScoped<IDacteService, DacteService>();
+builder.Services.AddSingleton<IHtmlToPdfService, PuppeteerHtmlToPdfService>();
 builder.Services.AddScoped<IXmlImportService, XmlImportService>();
 builder.Services.AddScoped<IXmlExportService, XmlExportService>();
 builder.Services.AddScoped<IEmailNotificacaoService, EmailNotificacaoService>();

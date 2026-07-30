@@ -66,11 +66,11 @@ public class XmlImportService(IEmpresaRepository empresaRepository, IXmlReposito
         if (existente is not null)
         {
             // Registro já existia (ex.: só o resumo, ou baixado antes deste campo
-            // existir) — atualiza com o conteúdo real em vez de só pular, e
-            // preenche NomeXml se ainda estiver vazio, sem sobrescrever um caminho
-            // já válido de uma gravação em disco anterior.
+            // existir) — atualiza com o conteúdo real em vez de só pular, e grava
+            // (ou regrava) o arquivo na pasta padrão da empresa, mesma convenção
+            // da Distribuição DFe (ver GravarArquivoPadraoAsync).
             existente.ConteudoXml = conteudo;
-            existente.NomeXml ??= arquivo;
+            existente.NomeXml = await GravarArquivoPadraoAsync(existente.EmpresaId, infNFe.ide.dhEmi.DateTime, "NFe", chave, conteudo, arquivo, existente.NomeXml, resultado, cancellationToken);
             await xmlRepository.AtualizarAsync(existente, cancellationToken);
             resultado.JaExistiam++;
             return;
@@ -88,6 +88,8 @@ public class XmlImportService(IEmpresaRepository empresaRepository, IXmlReposito
             resultado.EmpresaNaoEncontrada++;
             return;
         }
+
+        var nomeXml = GravarArquivoPadrao(empresa, infNFe.ide.dhEmi.DateTime, "NFe", chave, conteudo, arquivo, resultado);
 
         var xml = new Xml
         {
@@ -107,7 +109,7 @@ public class XmlImportService(IEmpresaRepository empresaRepository, IXmlReposito
             Numero = (int)infNFe.ide.nNF,
             Serie = infNFe.ide.serie.ToString(),
             Modelo = "55",
-            NomeXml = arquivo,
+            NomeXml = nomeXml,
             ConteudoXml = conteudo,
             Situacao = "Documento completo (importado)"
         };
@@ -127,7 +129,7 @@ public class XmlImportService(IEmpresaRepository empresaRepository, IXmlReposito
         if (existente is not null)
         {
             existente.ConteudoXml = conteudo;
-            existente.NomeXml ??= arquivo;
+            existente.NomeXml = await GravarArquivoPadraoAsync(existente.EmpresaId, infCte.ide.dhEmi.DateTime, "CTe", chave, conteudo, arquivo, existente.NomeXml, resultado, cancellationToken);
             await xmlRepository.AtualizarAsync(existente, cancellationToken);
             resultado.JaExistiam++;
             return;
@@ -146,6 +148,8 @@ public class XmlImportService(IEmpresaRepository empresaRepository, IXmlReposito
             return;
         }
 
+        var nomeXml = GravarArquivoPadrao(empresa, infCte.ide.dhEmi.DateTime, "CTe", chave, conteudo, arquivo, resultado);
+
         var xml = new Xml
         {
             Chave = chave,
@@ -163,12 +167,50 @@ public class XmlImportService(IEmpresaRepository empresaRepository, IXmlReposito
             Numero = (int)infCte.ide.nCT,
             Serie = infCte.ide.serie.ToString(),
             Modelo = "57",
-            NomeXml = arquivo,
+            NomeXml = nomeXml,
             ConteudoXml = conteudo,
             Situacao = "Documento completo (importado)"
         };
 
         await xmlRepository.IncluirAsync(xml, cancellationToken);
         resultado.Importados++;
+    }
+
+    /// <summary>
+    /// Grava o XML na pasta padrão da empresa (mesma convenção da Distribuição
+    /// DFe, ver <see cref="Storage.CaminhoXmlHelper"/>) para um registro NOVO —
+    /// a empresa já foi encontrada nesse caso. Falha de disco não impede a
+    /// importação (fica registrada em <c>resultado.Erros</c>), e o caminho
+    /// original do arquivo escaneado serve de fallback pro <c>NomeXml</c>.
+    /// </summary>
+    private static string GravarArquivoPadrao(Empresa empresa, DateTime dataEmissao, string tipoDocumento, string chave, string conteudo, string arquivoOrigem, ResultadoImportacaoXmlsDto resultado)
+    {
+        var (caminho, erro) = Storage.CaminhoXmlHelper.TentarGravarArquivo(empresa.PastaXml, empresa.Cnpj!, dataEmissao, tipoDocumento, chave, conteudo);
+        if (erro is not null)
+        {
+            resultado.Erros.Add($"{Path.GetFileName(arquivoOrigem)}: falhou ao gravar em disco na pasta padrão ({erro}).");
+        }
+
+        return caminho ?? arquivoOrigem;
+    }
+
+    /// <summary>
+    /// Mesma gravação de <see cref="GravarArquivoPadrao"/>, para um registro que
+    /// JÁ existia (ex.: resumo, ou importado antes desta convenção existir) —
+    /// aqui só temos o <c>EmpresaId</c> gravado no próprio <see cref="Xml"/>,
+    /// então busca a <see cref="Empresa"/> por id. Sem empresa associada (ou sem
+    /// CNPJ cadastrado), mantém o comportamento anterior: só preenche
+    /// <c>NomeXml</c> se ainda estiver vazio, sem sobrescrever um caminho já
+    /// válido.
+    /// </summary>
+    private async Task<string?> GravarArquivoPadraoAsync(int? empresaId, DateTime dataEmissao, string tipoDocumento, string chave, string conteudo, string arquivoOrigem, string? nomeXmlAtual, ResultadoImportacaoXmlsDto resultado, CancellationToken cancellationToken)
+    {
+        var empresa = empresaId is not null ? await empresaRepository.ObterPorIdAsync(empresaId.Value, cancellationToken) : null;
+        if (empresa?.Cnpj is null)
+        {
+            return nomeXmlAtual ?? arquivoOrigem;
+        }
+
+        return GravarArquivoPadrao(empresa, dataEmissao, tipoDocumento, chave, conteudo, arquivoOrigem, resultado);
     }
 }

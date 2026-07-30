@@ -224,11 +224,40 @@
         }
     }
 
-    private async Task VerDanfeAsync(XmlDto xml) =>
-        await JS.InvokeVoidAsync("open", $"{Http.BaseAddress}api/v1/xmls/{xml.Chave}/danfe", "_blank");
+    private Task VerDanfeAsync(XmlDto xml) => VerPdfAsync(xml.Chave, "danfe");
 
-    private async Task VerDacteAsync(XmlDto xml) =>
-        await JS.InvokeVoidAsync("open", $"{Http.BaseAddress}api/v1/xmls/{xml.Chave}/dacte", "_blank");
+    private Task VerDacteAsync(XmlDto xml) => VerPdfAsync(xml.Chave, "dacte");
+
+    private async Task VerPdfAsync(string chave, string rota)
+    {
+        var nomeJanela = $"pdf-{chave}";
+        // Precisa ser a primeira instrução, sem await antes, senão o navegador
+        // bloqueia como pop-up não solicitado (ver pdfViewer.js).
+        await JS.InvokeVoidAsync("aggilleDfe.abrirJanelaCarregando", nomeJanela);
+
+        try
+        {
+            var resposta = await Http.GetAsync($"api/v1/xmls/{chave}/{rota}");
+            if (resposta.IsSuccessStatusCode)
+            {
+                await using var conteudo = await resposta.Content.ReadAsStreamAsync();
+                using var streamRef = new DotNetStreamReference(conteudo);
+                await JS.InvokeVoidAsync("aggilleDfe.exibirPdfNaJanela", nomeJanela, streamRef);
+                return;
+            }
+
+            var problema = await resposta.Content.ReadFromJsonAsync<ErroSimples>();
+            var mensagem = problema?.Erro ?? "Não foi possível gerar o PDF.";
+            await JS.InvokeVoidAsync("aggilleDfe.fecharJanelaComErro", nomeJanela, mensagem);
+            Snackbar.Add(mensagem, Severity.Error);
+        }
+        catch (HttpRequestException)
+        {
+            const string mensagem = "Não foi possível conectar à API.";
+            await JS.InvokeVoidAsync("aggilleDfe.fecharJanelaComErro", nomeJanela, mensagem);
+            Snackbar.Add(mensagem, Severity.Error);
+        }
+    }
 
     private async Task ManifestarCienciaAsync(XmlDto xml)
     {

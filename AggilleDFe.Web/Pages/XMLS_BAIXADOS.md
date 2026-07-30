@@ -36,13 +36,20 @@
     falhou ou foi para um caminho errado (ver "Banco de dados como fonte de
     verdade" em `DISTRIBUICAO_DFE.md`). Mostra snackbar de sucesso/erro, não
     recarrega a grid (não muda nenhuma coluna exibida).
-  - **Ver DANFE** (só `Modelo == "55"`): `IJSRuntime.InvokeVoidAsync("open",
-    url, "_blank")` para `GET /api/v1/xmls/{chave}/danfe` — abre o DANFE em
-    HTML numa aba nova (ver `AggilleDFe.Infrastructure/Integrations/DANFE.md`);
-    o usuário imprime/salva como PDF pelo próprio navegador.
-  - **Ver DACTE** (só `Modelo == "57"`): mesmo padrão do DANFE, pra
-    `GET /api/v1/xmls/{chave}/dacte` — layout próprio, sem pacote pronto (ver
-    `AggilleDFe.Infrastructure/Integrations/DACTE.md`).
+  - **Ver DANFE** (só `Modelo == "55"`) / **Ver DACTE** (só `Modelo ==
+    "57"`): `VerPdfAsync` (método compartilhado pelos dois botões) —
+    `GET /api/v1/xmls/{chave}/danfe` ou `/dacte`, que devolvem PDF de
+    verdade (ver `AggilleDFe.Infrastructure/Integrations/DANFE.md`/`DACTE.md`
+    e `PDF.md`). Como a geração via Chromium headless não é instantânea, o
+    fluxo evita deixar uma aba em branco "travada": abre (síncrono, antes de
+    qualquer `await`, pra não ser bloqueado como pop-up) uma aba com "Gerando
+    PDF, aguarde..." (`aggilleDfe.abrirJanelaCarregando`, em
+    `wwwroot/js/pdfViewer.js`), busca o PDF via `HttpClient` e navega essa
+    mesma aba pra um blob URL do PDF (`aggilleDfe.exibirPdfNaJanela`) — o
+    navegador exibe inline, no visualizador nativo, não como download (o
+    endpoint também não manda `Content-Disposition: attachment` de
+    propósito). Erro (chave não encontrada, etc.) aparece na própria aba e
+    via `Snackbar`.
   - **Ciência da Operação** (só `Modelo == "55"`): confirmação simples
     (`ShowMessageBoxAsync`) → `POST /api/v1/xmls/{chave}/manifestacao/ciencia`.
   - **Desconhecimento da Operação** / **Operação Não Realizada** (só
