@@ -1,0 +1,29 @@
+@using AggilleDFe.Application.DTOs
+@inject HttpClient Http
+
+@if (!string.IsNullOrWhiteSpace(_versao))
+{
+    <MudText Typo="Typo.caption" Align="Align" Class="@Class" Style="@Style" Color="Color.Inherit">v@(_versao)</MudText>
+}
+
+@code {
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public Align Align { get; set; } = Align.Left;
+
+    private string? _versao;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var resultado = await Http.GetFromJsonAsync<VersaoDto>("api/v1/versao");
+            _versao = resultado?.Versao;
+        }
+        catch (HttpRequestException)
+        {
+            // Sem versão no AppBar/login não é crítico o suficiente pra
+            // atrapalhar o carregamento da tela com um Snackbar de erro.
+        }
+    }
+}

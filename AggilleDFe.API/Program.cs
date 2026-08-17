@@ -11,6 +11,7 @@ using AggilleDFe.Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,9 +93,25 @@ app.MapDfeEndpoints();
 app.MapDashboardEndpoints();
 app.MapAutenticacaoEndpoints();
 app.MapUsuarioEndpoints();
+app.MapVersaoEndpoints();
 
 using (var scope = app.Services.CreateScope())
 {
+    // Grava a versão compilada nesta imagem (Directory.Build.props ->
+    // AssemblyInformationalVersionAttribute) na Configuracao a cada start —
+    // é assim que o BUILD mostrado no AppBar/login reflete a imagem
+    // realmente publicada, sem exigir CRUD manual no banco do cliente.
+    var versaoApp = Assembly.GetExecutingAssembly()
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+    if (!string.IsNullOrWhiteSpace(versaoApp))
+    {
+        var configuracaoRepository = scope.ServiceProvider.GetRequiredService<IConfiguracaoRepository>();
+        var configuracao = await configuracaoRepository.ObterAsync() ?? new Configuracao();
+        configuracao.Versao = versaoApp;
+        await configuracaoRepository.SalvarAsync(configuracao);
+    }
+
     var usuarioRepository = scope.ServiceProvider.GetRequiredService<IUsuarioRepository>();
     if (!await usuarioRepository.ExisteAlgumAsync())
     {

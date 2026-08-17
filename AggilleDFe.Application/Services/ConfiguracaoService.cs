@@ -37,6 +37,12 @@ public class ConfiguracaoService(IConfiguracaoRepository repository) : IConfigur
         return null;
     }
 
+    public async Task<string?> ObterVersaoAsync(CancellationToken cancellationToken = default)
+    {
+        var configuracao = await repository.ObterAsync(cancellationToken);
+        return configuracao?.Versao;
+    }
+
     private static ConfiguracaoDto ParaDto(Configuracao configuracao) => new()
     {
         Id = configuracao.Id,

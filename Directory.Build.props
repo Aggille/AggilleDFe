@@ -1,0 +1,15 @@
+<Project>
+  <!--
+    Versao do AggilleDFe: {ano}.{release}.{build}. O RELEASE so muda quando o
+    usuario avisar; o BUILD sobe a cada nova imagem publicada pro cliente (ver
+    update-cliente.bat / docker compose build+push). A API grava esse valor
+    (via AssemblyInformationalVersionAttribute) no banco a cada start
+    (Configuracao.Versao, ver Program.cs).
+  -->
+  <PropertyGroup>
+    <VersaoAno>2026</VersaoAno>
+    <VersaoRelease>015</VersaoRelease>
+    <VersaoBuild>00001</VersaoBuild>
+    <InformationalVersion>$(VersaoAno).$(VersaoRelease).$(VersaoBuild)</InformationalVersion>
+  </PropertyGroup>
+</Project>
