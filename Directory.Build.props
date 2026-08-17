@@ -9,7 +9,10 @@
   <PropertyGroup>
     <VersaoAno>2026</VersaoAno>
     <VersaoRelease>015</VersaoRelease>
-    <VersaoBuild>00001</VersaoBuild>
+    <VersaoBuild>1001</VersaoBuild>
     <InformationalVersion>$(VersaoAno).$(VersaoRelease).$(VersaoBuild)</InformationalVersion>
+    <!-- Sem isso o MSBuild anexa "+<hash-do-commit>" na InformationalVersion,
+         estragando o formato ano.release.build exibido no AppBar/login. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 </Project>
