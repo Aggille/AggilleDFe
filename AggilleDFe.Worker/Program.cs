@@ -13,7 +13,8 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddWindowsService();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsql => npgsql.EnableRetryOnFailure()));
 builder.Services.AddScoped<IConfiguracaoRepository, ConfiguracaoRepository>();
 builder.Services.AddScoped<IEmpresaRepository, EmpresaRepository>();
 builder.Services.AddScoped<IXmlRepository, XmlRepository>();

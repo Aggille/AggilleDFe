@@ -37,7 +37,8 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddSwaggerDocumentation();
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsql => npgsql.EnableRetryOnFailure()));
 builder.Services.AddScoped<IConfiguracaoRepository, ConfiguracaoRepository>();
 builder.Services.AddScoped<IConfiguracaoService, ConfiguracaoService>();
 builder.Services.AddScoped<IEmpresaRepository, EmpresaRepository>();
