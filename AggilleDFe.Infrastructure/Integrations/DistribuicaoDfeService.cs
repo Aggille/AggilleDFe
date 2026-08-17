@@ -400,12 +400,15 @@ public class DistribuicaoDfeService(
         var infProt = doc.protNFe.infProt;
         var chave = infProt.chNFe;
 
+        var empresaDestino = await ResolverEmpresaDestinoAsync(empresa, infNFe.dest?.CNPJ, cancellationToken);
+
         var conteudoXml = Compressao.Unzip(item.XmlNfe);
-        var (caminho, erroDisco) = Storage.CaminhoXmlHelper.TentarGravarArquivo(empresa.PastaXml, empresa.Cnpj!, infNFe.ide.dhEmi.DateTime, "NFe", chave, conteudoXml);
+        var (caminho, erroDisco) = Storage.CaminhoXmlHelper.TentarGravarArquivo(empresaDestino.PastaXml, empresaDestino.Cnpj!, infNFe.ide.dhEmi.DateTime, "NFe", chave, conteudoXml);
 
         var xml = await xmlRepository.ObterPorChaveAsync(chave, cancellationToken);
         var novo = xml is null;
-        xml ??= new Xml { Chave = chave, EmpresaId = empresa.Id };
+        xml ??= new Xml { Chave = chave, EmpresaId = empresaDestino.Id };
+        xml.EmpresaId = empresaDestino.Id;
 
         xml.Protocolo = infProt.nProt;
         xml.Emissao = DateOnly.FromDateTime(infNFe.ide.dhEmi.DateTime);
@@ -429,16 +432,44 @@ public class DistribuicaoDfeService(
         if (novo) await xmlRepository.IncluirAsync(xml, cancellationToken);
         else await xmlRepository.AtualizarAsync(xml, cancellationToken);
 
+        var observacaoRedirecionamento = empresaDestino.Id != empresa.Id
+            ? $" (retornado na consulta da empresa \"{empresa.RazaoSocial}\", mas destinado a \"{empresaDestino.RazaoSocial}\")"
+            : string.Empty;
+
         if (erroDisco is null)
         {
-            await LogarAsync(empresa.Id, "NFe: XML baixado e salvo.", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
+            await LogarAsync(empresaDestino.Id, $"NFe: XML baixado e salvo.{observacaoRedirecionamento}", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
         }
         else
         {
-            await LogarAsync(empresa.Id,
-                $"NFe: XML baixado e registrado no banco, mas falhou ao gravar em disco (pasta \"{empresa.PastaXml}\"): {erroDisco}",
+            await LogarAsync(empresaDestino.Id,
+                $"NFe: XML baixado e registrado no banco, mas falhou ao gravar em disco (pasta \"{empresaDestino.PastaXml}\"): {erroDisco}{observacaoRedirecionamento}",
                 chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// A Distribuição DFe pode retornar, junto aos documentos da empresa consultada,
+    /// notas destinadas a OUTRA empresa cadastrada no sistema — típico quando matriz e
+    /// filial usam o mesmo certificado digital (a SEFAZ não filtra estritamente pelo
+    /// CNPJ informado nesse caso). Confirmado em produção: uma NFe com
+    /// <c>dest.CNPJ</c> da filial apareceu na consulta feita com o CNPJ da matriz e foi
+    /// salva (antes desta correção) na pasta da matriz. Aqui, se o CNPJ do
+    /// destinatário do documento não bate com o da empresa consultada mas corresponde
+    /// a outra empresa cadastrada, o documento pertence a essa outra empresa — usa a
+    /// pasta/CNPJ/EmpresaId dela. Se não corresponder a nenhuma empresa cadastrada
+    /// (ex.: NFe emitida pela própria empresa consultada, para um terceiro), mantém a
+    /// empresa original.
+    /// </summary>
+    private async Task<Empresa> ResolverEmpresaDestinoAsync(Empresa empresaConsultada, string? cnpjDestinatario, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cnpjDestinatario) || cnpjDestinatario == empresaConsultada.Cnpj)
+        {
+            return empresaConsultada;
+        }
+
+        var empresaCorreta = await empresaRepository.ObterPorCnpjAsync(cnpjDestinatario, cancellationToken);
+        return empresaCorreta ?? empresaConsultada;
     }
 
     private async Task ProcessarEventoCompletoNfeAsync(Empresa empresa, NFe.Classes.Servicos.DistribuicaoDFe.Schemas.procEventoNFe evt, int? nsu, CancellationToken cancellationToken)
@@ -563,11 +594,14 @@ public class DistribuicaoDfeService(
         var infProt = doc.protCTe.infProt;
         var chave = infProt.chCTe;
 
-        var (caminho, erroDisco) = Storage.CaminhoXmlHelper.TentarGravarArquivo(empresa.PastaXml, empresa.Cnpj!, infCte.ide.dhEmi.DateTime, "CTe", chave, conteudoXml);
+        var empresaDestino = await ResolverEmpresaDestinoAsync(empresa, infCte.dest?.CNPJ, cancellationToken);
+
+        var (caminho, erroDisco) = Storage.CaminhoXmlHelper.TentarGravarArquivo(empresaDestino.PastaXml, empresaDestino.Cnpj!, infCte.ide.dhEmi.DateTime, "CTe", chave, conteudoXml);
 
         var xml = await xmlRepository.ObterPorChaveAsync(chave, cancellationToken);
         var novo = xml is null;
-        xml ??= new Xml { Chave = chave, EmpresaId = empresa.Id };
+        xml ??= new Xml { Chave = chave, EmpresaId = empresaDestino.Id };
+        xml.EmpresaId = empresaDestino.Id;
 
         xml.Protocolo = infProt.nProt;
         xml.Emissao = DateOnly.FromDateTime(infCte.ide.dhEmi.DateTime);
@@ -590,14 +624,18 @@ public class DistribuicaoDfeService(
         if (novo) await xmlRepository.IncluirAsync(xml, cancellationToken);
         else await xmlRepository.AtualizarAsync(xml, cancellationToken);
 
+        var observacaoRedirecionamento = empresaDestino.Id != empresa.Id
+            ? $" (retornado na consulta da empresa \"{empresa.RazaoSocial}\", mas destinado a \"{empresaDestino.RazaoSocial}\")"
+            : string.Empty;
+
         if (erroDisco is null)
         {
-            await LogarAsync(empresa.Id, "CTe: XML baixado e salvo.", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
+            await LogarAsync(empresaDestino.Id, $"CTe: XML baixado e salvo.{observacaoRedirecionamento}", chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
         }
         else
         {
-            await LogarAsync(empresa.Id,
-                $"CTe: XML baixado e registrado no banco, mas falhou ao gravar em disco (pasta \"{empresa.PastaXml}\"): {erroDisco}",
+            await LogarAsync(empresaDestino.Id,
+                $"CTe: XML baixado e registrado no banco, mas falhou ao gravar em disco (pasta \"{empresaDestino.PastaXml}\"): {erroDisco}{observacaoRedirecionamento}",
                 chave: xml.Chave, xmlId: xml.Id, nsu: nsu, cancellationToken: cancellationToken);
         }
     }
