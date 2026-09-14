@@ -43,38 +43,6 @@
             <MudDataGridPager T="XmlDto" />
         </PagerContent>
         <Columns>
-            <TemplateColumn Title="Empresa">
-                <CellTemplate>@NomeEmpresa(context.Item.EmpresaId)</CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Modelo">
-                <CellTemplate>@FormatarModelo(context.Item.Modelo)</CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Núm./Série">
-                <CellTemplate>@context.Item.Numero @(string.IsNullOrEmpty(context.Item.Serie) ? "" : $"/ {context.Item.Serie}")</CellTemplate>
-            </TemplateColumn>
-            <PropertyColumn Property="x => x.Chave" Title="Chave" />
-            <PropertyColumn Property="x => x.FornecedorNome" Title="Fornecedor/Emitente" />
-            <TemplateColumn Title="Emissão">
-                <CellTemplate>@(context.Item.Emissao?.ToString("dd/MM/yyyy"))</CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Baixado em">
-                <CellTemplate>@(context.Item.DataDownload?.ToString("dd/MM/yyyy"))</CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Valor Total">
-                <CellTemplate>@(context.Item.ValorTotal?.ToString("C2"))</CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="Situação">
-                <CellTemplate>
-                    @if (context.Item.Cancelada)
-                    {
-                        <MudChip T="string" Color="Color.Error" Size="Size.Small">Cancelada</MudChip>
-                    }
-                    else
-                    {
-                        <MudChip T="string" Color="Color.Success" Size="Size.Small">@(context.Item.Situacao ?? "Documento completo")</MudChip>
-                    }
-                </CellTemplate>
-            </TemplateColumn>
             <TemplateColumn Title="Ações" Sortable="false">
                 <CellTemplate>
                     <div style="display: flex; flex-wrap: nowrap; white-space: nowrap;">
@@ -106,6 +74,38 @@
                             </MudTooltip>
                         }
                     </div>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Empresa">
+                <CellTemplate>@NomeEmpresa(context.Item.EmpresaId)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Modelo">
+                <CellTemplate>@FormatarModelo(context.Item.Modelo)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Núm./Série">
+                <CellTemplate>@context.Item.Numero @(string.IsNullOrEmpty(context.Item.Serie) ? "" : $"/ {context.Item.Serie}")</CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Chave" Title="Chave" />
+            <PropertyColumn Property="x => x.FornecedorNome" Title="Fornecedor/Emitente" />
+            <TemplateColumn Title="Emissão">
+                <CellTemplate>@(context.Item.Emissao?.ToString("dd/MM/yyyy"))</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Baixado em">
+                <CellTemplate>@(context.Item.DataDownload?.ToString("dd/MM/yyyy"))</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Valor Total">
+                <CellTemplate>@(context.Item.ValorTotal?.ToString("C2"))</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Situação">
+                <CellTemplate>
+                    @if (context.Item.Cancelada)
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small">Cancelada</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small">@(context.Item.Situacao ?? "Documento completo")</MudChip>
+                    }
                 </CellTemplate>
             </TemplateColumn>
         </Columns>

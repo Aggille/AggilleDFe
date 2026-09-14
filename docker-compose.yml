@@ -36,6 +36,10 @@ services:
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=aggilledfe;Username=aggilledfe;Password=${POSTGRES_PASSWORD}
       WebClientOrigins__0: ${WEB_PUBLIC_URL:-http://localhost:8080}
       SchemasPath: /dados/schemas
+    # /dev/shm padrao do Docker (64MB) e pequeno demais pro Chromium
+    # (PuppeteerHtmlToPdfService, geracao de DANFE/DACTE) - reforca o
+    # --disable-dev-shm-usage ja passado no LaunchOptions.
+    shm_size: '1gb'
     ports:
       - "5007:8080"
     volumes:

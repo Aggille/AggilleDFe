@@ -59,7 +59,31 @@ public sealed class PuppeteerHtmlToPdfService : IHtmlToPdfService, IAsyncDisposa
                 // --no-sandbox: o container roda o processo do Chromium como root
                 // (sem USER dedicado no Dockerfile), e o sandbox do Chromium se
                 // recusa a rodar como root sem essa flag.
-                Args = ["--no-sandbox", "--disable-setuid-sandbox"]
+                // --disable-dev-shm-usage: o /dev/shm padrao do Docker e so 64MB,
+                // pequeno demais pro Chromium - sem essa flag, a renderizacao de
+                // paginas maiores estoura esse limite, o processo renderer
+                // trava/reinicia e o Chromium fica em loop de crash-restart, o que
+                // explica CPU presa em 100%+ mesmo sem requisicoes concorrentes.
+                // --disable-gpu/--disable-software-rasterizer: sem GPU de verdade
+                // no container, o "new headless mode" (padrao do Chrome estavel
+                // atual) sobe um processo de GPU que cai pra rasterizacao via
+                // software (SwiftShader) - muito mais caro de CPU que renderizar
+                // sem tentar usar GPU nenhuma.
+                Args =
+                [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--disable-software-rasterizer",
+                    "--disable-extensions",
+                    "--disable-background-networking",
+                    "--disable-default-apps",
+                    "--disable-sync",
+                    "--metrics-recording-only",
+                    "--mute-audio",
+                    "--no-first-run"
+                ]
             });
             return _browser;
         }

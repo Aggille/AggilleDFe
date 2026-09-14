@@ -2,8 +2,8 @@
 REM ============================================================================
 REM  update-cliente.bat - Atualiza o AggilleDFe no servidor Linux do cliente
 REM  (172.16.0.3) via SSH: puxa as imagens mais recentes do GHCR, recria os
-REM  containers e limpa imagens antigas. Pede a senha do root a cada execucao
-REM  (sem chave configurada).
+REM  containers e limpa imagens antigas. Usa autenticacao por chave SSH
+REM  (nao pede senha).
 REM
 REM  Pre-requisito: as imagens novas ja precisam estar publicadas no GHCR
 REM  (ver DOCKER.md - "docker compose build" + "docker compose push", ou
@@ -29,7 +29,7 @@ set USUARIO=root
 set PASTA_REMOTA=/opt/aggilledfe/docker
 
 echo.
-echo Copiando docker-compose.prod.yml atualizado para %USUARIO%@%SERVIDOR% (vai pedir a senha)...
+echo Copiando docker-compose.prod.yml atualizado para %USUARIO%@%SERVIDOR%...
 echo.
 
 scp docker-compose.prod.yml %USUARIO%@%SERVIDOR%:%PASTA_REMOTA%/docker-compose.prod.yml
@@ -41,7 +41,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo Conectando em %USUARIO%@%SERVIDOR% (vai pedir a senha de novo)...
+echo Conectando em %USUARIO%@%SERVIDOR%...
 echo Atualizando AggilleDFe em %PASTA_REMOTA%...
 echo.
 
