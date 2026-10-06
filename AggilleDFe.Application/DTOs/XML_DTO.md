@@ -34,3 +34,9 @@ XMLs baixados — permanecem só na entidade:
   tabela inteira de uma vez.
 - Ordenação: `DataDownload` decrescente, depois `Id` decrescente (mais
   recentes primeiro).
+
+## Consulta por empresa na API externa (`GET /api/v1/dfe/xmls`)
+
+O `XmlDto` também é o retorno do endpoint de integração que lista os XMLs de
+uma empresa (pelo CNPJ) por período e tipo de documento — especificação em
+`PESQUISA_XMLS_EMPRESA.md`.
