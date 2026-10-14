@@ -18,4 +18,11 @@ EOF
 # reescrito, ja que o navegador sempre aceita gzip.
 rm -f /usr/share/nginx/html/appsettings.json.gz /usr/share/nginx/html/appsettings.json.br
 
+# O DNS interno muda conforme o runtime (Docker usa 127.0.0.11; Podman, comum
+# no CentOS/RHEL, usa o IP do gateway da rede) - pega o nameserver real do
+# container pro "resolver" do proxy /api/ no nginx.conf.
+RESOLVER=$(awk '/^nameserver/ { ip = $2; if (ip ~ /:/) ip = "[" ip "]"; print ip; exit }' /etc/resolv.conf)
+sed -i "s|__RESOLVER__|${RESOLVER:-127.0.0.11}|" /etc/nginx/conf.d/default.conf
+echo "Proxy /api/ -> http://api:8080 (resolver ${RESOLVER:-127.0.0.11})"
+
 exec nginx -g "daemon off;"
