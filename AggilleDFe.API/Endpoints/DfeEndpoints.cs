@@ -47,14 +47,15 @@ public static class DfeEndpoints
             [Description("CNPJ da empresa cadastrada (destinatária dos XMLs), com ou sem máscara. Ex.: 12345678000195. Obrigatório.")] string? cnpjEmpresa,
             [Description("Tipo de documento: todos (padrão), nfe, cte ou nfse (reservado — NFSe ainda não é armazenada, retorna lista vazia).")] string? tipo,
             [Description("false (padrão) filtra o período pela data de emissão; true, pela data de download.")] bool? usarDataDownload,
+            [Description("false (padrão) devolve a situação já gravada; true consulta antes na SEFAZ a situação dos documentos ainda não cancelados e grava os cancelamentos (cancelada, dataCancelamento, motivoCancelamento) — resposta mais lenta.")] bool? consultaSefaz,
             IXmlService xmlService,
             CancellationToken cancellationToken) =>
         {
-            var (xmls, erro) = await xmlService.PesquisarPorEmpresaAsync(dataInicial, dataFinal, cnpjEmpresa, tipo, usarDataDownload ?? false, cancellationToken);
+            var (xmls, erro) = await xmlService.PesquisarPorEmpresaAsync(dataInicial, dataFinal, cnpjEmpresa, tipo, usarDataDownload ?? false, consultaSefaz ?? false, cancellationToken);
             return xmls is not null ? Results.Ok(xmls) : Results.BadRequest(new { erro });
         })
         .WithSummary("Lista os XMLs baixados de uma empresa por período e tipo de documento")
-        .WithDescription("Retorna os XMLs baixados para a empresa cadastrada com o CNPJ informado (cnpjEmpresa), no período dataInicial/dataFinal (inclusivo — por data de emissão, ou por data de download se usarDataDownload=true), filtrando pelo tipo de documento (todos, nfe, cte ou nfse). A lista não traz o conteúdo do XML — use GET /api/v1/dfe/{chave}/xml para baixar o arquivo. Parâmetro inválido ou CNPJ sem empresa cadastrada → 400 { erro }; nenhum documento → 200 []. Especificação completa em AggilleDFe.Application/DTOs/PESQUISA_XMLS_EMPRESA.md.")
+        .WithDescription("Retorna os XMLs baixados para a empresa cadastrada com o CNPJ informado (cnpjEmpresa), no período dataInicial/dataFinal (inclusivo — por data de emissão, ou por data de download se usarDataDownload=true), filtrando pelo tipo de documento (todos, nfe, cte ou nfse). Com consultaSefaz=true, consulta antes na SEFAZ a situação dos documentos ainda não cancelados e atualiza cancelada/dataCancelamento/motivoCancelamento. A lista não traz o conteúdo do XML — use GET /api/v1/dfe/{chave}/xml para baixar o arquivo. Parâmetro inválido ou CNPJ sem empresa cadastrada → 400 { erro }; nenhum documento → 200 []. Especificação completa em AggilleDFe.Application/DTOs/PESQUISA_XMLS_EMPRESA.md.")
         .Produces<IReadOnlyList<XmlDto>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized);

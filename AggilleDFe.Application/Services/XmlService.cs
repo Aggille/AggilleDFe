@@ -6,7 +6,7 @@ using AggilleDFe.Domain.Interfaces;
 
 namespace AggilleDFe.Application.Services;
 
-public class XmlService(IXmlRepository repository, IEmpresaRepository empresaRepository) : IXmlService
+public class XmlService(IXmlRepository repository, IEmpresaRepository empresaRepository, ISituacaoSefazXmlService situacaoSefazXmlService) : IXmlService
 {
     public async Task<IReadOnlyList<XmlDto>> PesquisarAsync(int? empresaId, DateOnly? dataInicial, DateOnly? dataFinal, string? modelo, string? fornecedor, DateOnly? emissaoInicial = null, DateOnly? emissaoFinal = null, CancellationToken cancellationToken = default)
     {
@@ -14,7 +14,7 @@ public class XmlService(IXmlRepository repository, IEmpresaRepository empresaRep
         return xmls.Select(ParaDto).ToList();
     }
 
-    public async Task<(IReadOnlyList<XmlDto>? Xmls, string? Erro)> PesquisarPorEmpresaAsync(DateOnly? dataInicial, DateOnly? dataFinal, string? cnpjEmpresa, string? tipo, bool usarDataDownload = false, CancellationToken cancellationToken = default)
+    public async Task<(IReadOnlyList<XmlDto>? Xmls, string? Erro)> PesquisarPorEmpresaAsync(DateOnly? dataInicial, DateOnly? dataFinal, string? cnpjEmpresa, string? tipo, bool usarDataDownload = false, bool consultaSefaz = false, CancellationToken cancellationToken = default)
     {
         if (dataInicial is null || dataFinal is null)
         {
@@ -60,10 +60,31 @@ public class XmlService(IXmlRepository repository, IEmpresaRepository empresaRep
                 return (null, "Tipo de documento inválido — use todos, nfe, cte ou nfse.");
         }
 
-        var xmls = usarDataDownload
-            ? await repository.PesquisarAsync(empresa.Id, dataInicial, dataFinal, modelo, null, null, null, cancellationToken)
-            : await repository.PesquisarAsync(empresa.Id, null, null, modelo, null, dataInicial, dataFinal, cancellationToken);
+        var xmls = await PesquisarPeriodoAsync();
+
+        // consultaSefaz: antes de devolver a lista, consulta na SEFAZ a situação dos
+        // documentos ainda não cancelados e grava os cancelamentos encontrados, para o
+        // sistema integrador já receber Cancelada/MotivoCancelamento atualizados.
+        if (consultaSefaz)
+        {
+            var chaves = xmls
+                .Where(x => x.Cancelada != "S" && (x.Modelo == "55" || x.Modelo == "57") && x.Chave.Length == 44)
+                .Select(x => x.Chave)
+                .Distinct()
+                .ToList();
+
+            if (chaves.Count > 0)
+            {
+                await situacaoSefazXmlService.AtualizarCancelamentosAsync(empresa.Id, chaves, cancellationToken);
+                xmls = await PesquisarPeriodoAsync();
+            }
+        }
+
         return (xmls.Select(ParaDto).ToList(), null);
+
+        Task<IReadOnlyList<Xml>> PesquisarPeriodoAsync() => usarDataDownload
+            ? repository.PesquisarAsync(empresa.Id, dataInicial, dataFinal, modelo, null, null, null, cancellationToken)
+            : repository.PesquisarAsync(empresa.Id, null, null, modelo, null, dataInicial, dataFinal, cancellationToken);
     }
 
     private static XmlDto ParaDto(Xml xml) => new()

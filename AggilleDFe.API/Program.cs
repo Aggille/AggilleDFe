@@ -52,6 +52,7 @@ builder.Services.AddScoped<IDistribuicaoDfeService, DistribuicaoDfeService>();
 builder.Services.AddScoped<IDistribuicaoLoteService, DistribuicaoLoteService>();
 builder.Services.AddScoped<IXmlArquivoService, XmlArquivoService>();
 builder.Services.AddScoped<IManifestacaoService, ManifestacaoService>();
+builder.Services.AddScoped<ISituacaoSefazXmlService, SituacaoSefazXmlService>();
 builder.Services.AddScoped<IDanfeService, DanfeService>();
 builder.Services.AddScoped<IDacteService, DacteService>();
 builder.Services.AddSingleton<IHtmlToPdfService, PuppeteerHtmlToPdfService>();

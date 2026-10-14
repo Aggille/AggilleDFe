@@ -56,6 +56,7 @@ public static class ZeusConfiguracaoFactory
             ModeloDocumento = ModeloDocumento.NFe,
             DefineVersaoServicosAutomaticamente = false,
             VersaoNfeStatusServico = VersaoServico.Versao400,
+            VersaoNfeConsultaProtocolo = VersaoServico.Versao400,
             VersaoNFeDistribuicaoDFe = VersaoServico.Versao100,
             VersaoRecepcaoEventoManifestacaoDestinatario = VersaoServico.Versao400,
             ValidarSchemas = validarSchemas,

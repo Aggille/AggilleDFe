@@ -36,6 +36,39 @@ dá para testar pelo botão **Authorize** informando usuário e senha da API.
 | `cnpjEmpresa` | string | sim | CNPJ da **empresa cadastrada** (destinatária dos XMLs — não o fornecedor/emitente) |
 | `tipo` | string | não (padrão `todos`) | `todos`, `nfe`, `cte` ou `nfse` — sem diferenciar maiúsculas |
 | `usarDataDownload` | bool | não (padrão `false`) | `false`: período aplicado à data de **emissão**; `true`: à data de **download** (mesma convenção da exportação de XMLs) |
+| `consultaSefaz` | bool | não (padrão `false`) | `false`: devolve a situação já gravada no banco; `true`: antes de responder, consulta na SEFAZ a situação dos documentos e grava os cancelamentos (ver abaixo) |
+
+### `consultaSefaz`
+
+Serve para o sistema integrador receber a lista com a situação de
+cancelamento já atualizada — saber se a nota/conhecimento **está cancelado**
+(`cancelada`) e **por quê** (`motivoCancelamento`, além de
+`dataCancelamento`).
+
+Com `consultaSefaz=true`:
+
+1. A lista do período é montada normalmente.
+2. Para cada documento **ainda não cancelado** (NFe modelo 55 / CTe modelo 57,
+   chave de 44 dígitos), é feita a consulta protocolo na SEFAZ
+   (`ISituacaoSefazXmlService`, implementado em
+   `AggilleDFe.Infrastructure/Integrations/SituacaoSefazXmlService.cs` — ver
+   `SITUACAO_SEFAZ_XML.md`), com o certificado da empresa.
+3. Os cancelamentos encontrados são gravados na tabela `XMLS`
+   (`CANCELADA = "S"`, `DATA_CANCELAMENTO`, `MOTIVO_CANCELAMENTO` = justificativa
+   informada pelo emitente no evento de cancelamento).
+4. A lista é recarregada do banco e devolvida já com esses campos atualizados.
+
+Observações:
+
+- Documentos já cancelados não são consultados de novo (cancelamento é
+  definitivo).
+- A resposta fica mais lenta (uma consulta SEFAZ por documento, até 4 em
+  paralelo) — use períodos curtos; consultas repetidas da mesma chave em curto
+  intervalo podem gerar rejeição de consumo indevido (cStat 656) da SEFAZ.
+- Falhas na consulta (certificado, SEFAZ fora, chave não encontrada etc.)
+  **não** mudam o status `200`: a lista volta com a situação que já estava
+  gravada e o erro fica registrado em LOGS. Cada consulta gera uma linha de
+  resumo em LOGS (consultados / cancelamentos registrados / erros).
 
 ### `cnpjEmpresa`
 
