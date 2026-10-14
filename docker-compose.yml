@@ -90,9 +90,10 @@ services:
       context: .
       dockerfile: AggilleDFe.Web/Dockerfile
     environment:
-      # URL da API alcancavel pelo NAVEGADOR do usuario (nao pelo container -
-      # o Blazor WASM roda no navegador, fora da rede interna do compose).
-      API_URL: ${API_PUBLIC_URL:-http://localhost:5007}
+      # Vazio = o navegador chama a API na mesma origem do Web (/api/...) e o
+      # nginx do container repassa pro servico "api" (proxy reverso). So
+      # preencha API_PUBLIC_URL no .env pra forcar uma URL de API diferente.
+      API_URL: ${API_PUBLIC_URL:-}
     ports:
       - "5071:80"
     depends_on:

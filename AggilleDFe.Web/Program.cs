@@ -10,7 +10,11 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-var apiUrl = builder.Configuration["ApiUrl"] ?? "http://localhost:5007";
+// ApiUrl vazio = API na mesma origem da pagina (proxy reverso /api/ no nginx
+// do container web). Se vier apontando pra localhost mas a pagina foi aberta
+// por outro host (IP externo/dominio), "localhost" seria a maquina do usuario,
+// nao o servidor - entao cai na mesma origem tambem.
+var apiUrl = ResolverApiUrl(builder.Configuration["ApiUrl"], builder.HostEnvironment.BaseAddress);
 
 builder.Services.AddMudServices();
 builder.Services.AddScoped<ThemeService>();
@@ -38,3 +42,16 @@ builder.Services.AddHttpClient("Api", client => client.BaseAddress = new Uri(api
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Api"));
 
 await builder.Build().RunAsync();
+
+static string ResolverApiUrl(string? apiUrlConfigurada, string baseAddressPagina)
+{
+    if (string.IsNullOrWhiteSpace(apiUrlConfigurada))
+        return baseAddressPagina;
+
+    var api = new Uri(apiUrlConfigurada);
+    var pagina = new Uri(baseAddressPagina);
+    if (api.IsLoopback && !pagina.IsLoopback)
+        return baseAddressPagina;
+
+    return apiUrlConfigurada;
+}

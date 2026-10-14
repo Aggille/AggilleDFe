@@ -71,7 +71,8 @@ services:
   web:
     image: ghcr.io/aggille/aggilledfe-web:latest
     environment:
-      API_URL: ${API_PUBLIC_URL:-http://localhost:5007}
+      # Vazio = API na mesma origem do Web, via proxy reverso /api/ do nginx.
+      API_URL: ${API_PUBLIC_URL:-}
     ports:
       - "5071:80"
     depends_on:

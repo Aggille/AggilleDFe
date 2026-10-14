@@ -158,9 +158,17 @@ reescreve esse arquivo com a variável de ambiente `API_URL` a cada start,
 antes de subir o Nginx — dá pra trocar a URL da API só mudando a variável
 de ambiente do container `web`, sem recompilar nada.
 
-A API, por sua vez, precisa liberar essa origem no CORS
-(`WebClientOrigins`) — o compose já passa `WEB_PUBLIC_URL` do `.env` pra
-isso automaticamente.
+**Padrão: `API_URL` vazio (proxy reverso).** O `nginx.conf` do container
+`web` repassa `/api/...` para o serviço `api` do compose, e o Blazor chama a
+API na mesma origem em que a página foi aberta. Assim o sistema funciona
+igual acessando por `localhost`, IP da rede, IP externo (basta liberar a
+porta `5071` no roteador) ou domínio — sem URL fixa e sem CORS. Se `ApiUrl`
+vier apontando para `localhost` mas a página foi aberta por outro host, o
+Web também cai automaticamente na mesma origem.
+
+Só preencha `API_PUBLIC_URL` para forçar uma URL de API diferente; nesse
+caso a API precisa liberar a origem do Web no CORS (`WebClientOrigins`) —
+o compose já passa `WEB_PUBLIC_URL` do `.env` pra isso automaticamente.
 
 ## OpenSSL 3.0 e certificados A1 legados
 
