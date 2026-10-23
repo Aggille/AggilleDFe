@@ -63,19 +63,21 @@ public class XmlService(IXmlRepository repository, IEmpresaRepository empresaRep
         var xmls = await PesquisarPeriodoAsync();
 
         // consultaSefaz: antes de devolver a lista, consulta na SEFAZ a situação dos
-        // documentos ainda não cancelados e grava os cancelamentos encontrados, para o
-        // sistema integrador já receber Cancelada/MotivoCancelamento atualizados.
+        // documentos ainda não cancelados nem recusados e grava os cancelamentos e as
+        // recusas do destinatário encontrados, para o sistema integrador já receber
+        // Cancelada/Recusada (e motivos) atualizados — nos dois casos o documento não
+        // pode ser importado.
         if (consultaSefaz)
         {
             var chaves = xmls
-                .Where(x => x.Cancelada != "S" && (x.Modelo == "55" || x.Modelo == "57") && x.Chave.Length == 44)
+                .Where(x => x.Cancelada != "S" && !EstaRecusada(x) && (x.Modelo == "55" || x.Modelo == "57") && x.Chave.Length == 44)
                 .Select(x => x.Chave)
                 .Distinct()
                 .ToList();
 
             if (chaves.Count > 0)
             {
-                await situacaoSefazXmlService.AtualizarCancelamentosAsync(empresa.Id, chaves, cancellationToken);
+                await situacaoSefazXmlService.AtualizarSituacoesAsync(empresa.Id, chaves, cancellationToken);
                 xmls = await PesquisarPeriodoAsync();
             }
         }
@@ -111,6 +113,16 @@ public class XmlService(IXmlRepository repository, IEmpresaRepository empresaRep
         Schema = xml.Schema,
         Situacao = xml.Situacao,
         DataCancelamento = xml.DataCancelamento,
-        MotivoCancelamento = xml.MotivoCancelamento
+        MotivoCancelamento = xml.MotivoCancelamento,
+        Recusada = EstaRecusada(xml),
+        DataRecusa = xml.DataNaoRealizacao ?? xml.DataDesconhecimento,
+        MotivoRecusa = xml.DataNaoRealizacao is not null
+            ? xml.MotivoNaoRealizacao ?? "Operação Não Realizada"
+            : xml.DataDesconhecimento is not null ? "Desconhecimento da Operação" : null
     };
+
+    // Recusada pelo destinatário: Operação Não Realizada (210240) ou Desconhecimento
+    // da Operação (210220) registrados — manifestados pelo AggilleDFe ou encontrados
+    // na consulta de situação na SEFAZ (consultaSefaz).
+    private static bool EstaRecusada(Xml xml) => xml.DataNaoRealizacao is not null || xml.DataDesconhecimento is not null;
 }

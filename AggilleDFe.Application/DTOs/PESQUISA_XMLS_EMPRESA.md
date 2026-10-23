@@ -36,39 +36,51 @@ dá para testar pelo botão **Authorize** informando usuário e senha da API.
 | `cnpjEmpresa` | string | sim | CNPJ da **empresa cadastrada** (destinatária dos XMLs — não o fornecedor/emitente) |
 | `tipo` | string | não (padrão `todos`) | `todos`, `nfe`, `cte` ou `nfse` — sem diferenciar maiúsculas |
 | `usarDataDownload` | bool | não (padrão `false`) | `false`: período aplicado à data de **emissão**; `true`: à data de **download** (mesma convenção da exportação de XMLs) |
-| `consultaSefaz` | bool | não (padrão `false`) | `false`: devolve a situação já gravada no banco; `true`: antes de responder, consulta na SEFAZ a situação dos documentos e grava os cancelamentos (ver abaixo) |
+| `consultaSefaz` | bool | não (padrão `false`) | `false`: devolve a situação já gravada no banco; `true`: antes de responder, consulta na SEFAZ a situação dos documentos e grava os cancelamentos e as recusas do destinatário (ver abaixo) |
 
 ### `consultaSefaz`
 
-Serve para o sistema integrador receber a lista com a situação de
-cancelamento já atualizada — saber se a nota/conhecimento **está cancelado**
-(`cancelada`) e **por quê** (`motivoCancelamento`, além de
-`dataCancelamento`).
+Serve para o sistema integrador receber a lista com a situação já
+atualizada e saber quais documentos **não podem ser importados**:
+
+- **cancelado** pelo emitente (`cancelada`, `motivoCancelamento`,
+  `dataCancelamento`);
+- **recusado pelo destinatário** — a empresa registrou Desconhecimento da
+  Operação (210220) ou Operação Não Realizada (210240), aqui ou em outro
+  sistema (`recusada`, `motivoRecusa`, `dataRecusa`). Vale a mesma regra da
+  cancelada: a nota não deve ser importada.
 
 Com `consultaSefaz=true`:
 
 1. A lista do período é montada normalmente.
-2. Para cada documento **ainda não cancelado** (NFe modelo 55 / CTe modelo 57,
-   chave de 44 dígitos), é feita a consulta protocolo na SEFAZ
+2. Para cada documento **ainda não cancelado nem recusado** (NFe modelo 55 /
+   CTe modelo 57, chave de 44 dígitos), é feita a consulta protocolo na SEFAZ
    (`ISituacaoSefazXmlService`, implementado em
    `AggilleDFe.Infrastructure/Integrations/SituacaoSefazXmlService.cs` — ver
    `SITUACAO_SEFAZ_XML.md`), com o certificado da empresa.
 3. Os cancelamentos encontrados são gravados na tabela `XMLS`
    (`CANCELADA = "S"`, `DATA_CANCELAMENTO`, `MOTIVO_CANCELAMENTO` = justificativa
-   informada pelo emitente no evento de cancelamento).
+   informada pelo emitente no evento de cancelamento). As recusas do
+   destinatário (NFe) são gravadas nos mesmos campos da manifestação feita
+   pelo AggilleDFe: `DATA_NAO_REALIZACAO` + `MOTIVO_NAO_REALIZACAO` ou
+   `DATA_DESCONHECIMENTO`, e `SITUACAO`.
 4. A lista é recarregada do banco e devolvida já com esses campos atualizados.
 
 Observações:
 
-- Documentos já cancelados não são consultados de novo (cancelamento é
-  definitivo).
+- Documentos já cancelados ou recusados não são consultados de novo (os dois
+  casos já impedem a importação).
+- Recusa só se aplica a NFe: é a **última** manifestação conclusiva do
+  destinatário que vale (uma Confirmação da Operação registrada depois da
+  recusa prevalece).
 - A resposta fica mais lenta (uma consulta SEFAZ por documento, até 4 em
   paralelo) — use períodos curtos; consultas repetidas da mesma chave em curto
   intervalo podem gerar rejeição de consumo indevido (cStat 656) da SEFAZ.
 - Falhas na consulta (certificado, SEFAZ fora, chave não encontrada etc.)
   **não** mudam o status `200`: a lista volta com a situação que já estava
   gravada e o erro fica registrado em LOGS. Cada consulta gera uma linha de
-  resumo em LOGS (consultados / cancelamentos registrados / erros).
+  resumo em LOGS (consultados / cancelamentos registrados / recusas
+  registradas / erros).
 
 ### `cnpjEmpresa`
 
@@ -153,7 +165,8 @@ Resposta `200` (resumida):
     "serie": "1",
     "modelo": "55",
     "empresaId": 3,
-    "cancelada": false
+    "cancelada": false,
+    "recusada": false
   }
 ]
 ```

@@ -18,6 +18,15 @@ XMLs baixados — permanecem só na entidade:
   Modelo (`"55"` NFe / `"57"` CTe), EmpresaId, Schema, Situacao,
   DataCancelamento, MotivoCancelamento
 - Cancelada: bool — `true` quando a entidade tem `Cancelada == "S"`
+- Recusada: bool — `true` quando o destinatário recusou a nota, ou seja, a
+  entidade tem `DataNaoRealizacao` (Operação Não Realizada, 210240) ou
+  `DataDesconhecimento` (Desconhecimento da Operação, 210220) preenchida —
+  manifestada pelo AggilleDFe ou encontrada na consulta de situação na SEFAZ.
+  Como a cancelada, a nota recusada **não deve ser importada** pelo integrador.
+- DataRecusa: `DataNaoRealizacao ?? DataDesconhecimento`
+- MotivoRecusa: `MotivoNaoRealizacao` (justificativa) para Operação Não
+  Realizada — na falta, `"Operação Não Realizada"`; `"Desconhecimento da
+  Operação"` para desconhecimento; `null` quando não recusada
 
 ## Filtros da consulta (`GET /api/v1/xmls`)
 

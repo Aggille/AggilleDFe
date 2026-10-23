@@ -1,15 +1,16 @@
-# Consulta de Situação na SEFAZ (cancelamento de XMLs)
+# Consulta de Situação na SEFAZ (cancelamento e recusa de XMLs)
 
-`SituacaoSefazXmlService` (`ISituacaoSefazXmlService`) consulta na SEFAZ a
-situação atual de documentos já registrados na tabela `XMLS` e grava os que
-estiverem cancelados. Hoje é acionado pelo parâmetro `consultaSefaz=true` de
+`SituacaoSefazXmlService` (`ISituacaoSefazXmlService.AtualizarSituacoesAsync`)
+consulta na SEFAZ a situação atual de documentos já registrados na tabela
+`XMLS` e grava os que estiverem cancelados pelo emitente ou recusados pelo
+destinatário. Hoje é acionado pelo parâmetro `consultaSefaz=true` de
 `GET /api/v1/dfe/xmls` (ver `AggilleDFe.Application/DTOs/PESQUISA_XMLS_EMPRESA.md`).
 
 ## Entrada
 
 - `empresaId`: empresa cujo certificado digital (A1) é usado nas consultas.
 - `chaves`: chaves de 44 dígitos (NFe modelo 55 ou CTe modelo 57). O chamador
-  já envia só as que ainda não estão canceladas.
+  já envia só as que ainda não estão canceladas nem recusadas.
 
 ## Serviços Zeus DFe.NET
 
@@ -47,13 +48,47 @@ Gravação na entidade `Xml`:
 cancelamento — nada é gravado. Qualquer outro `cStat` (ex.: 217 — não consta
 na base, 656 — consumo indevido) é tratado como erro.
 
+## Regra de recusa do destinatário (NFe)
+
+A nota recusada pelo destinatário também não pode ser importada (mesma regra
+da cancelada). Em `procEventoNFe` é pegada a **última** (maior `dhRegEvento`)
+manifestação conclusiva do destinatário com `retEvento.cStat` 135, 136 ou 155:
+
+| `tpEvento` | Resultado |
+|---|---|
+| 210220 — Desconhecimento da Operação | recusada |
+| 210240 — Operação Não Realizada | recusada |
+| 210200 — Confirmação da Operação | não recusada (confirmação posterior prevalece) |
+
+Ciência da Operação (210210) não é conclusiva e é ignorada. A recusa pode ter
+sido feita pelo AggilleDFe ou por outro sistema da empresa (ERP, portal) — a
+consulta protocolo devolve os eventos de qualquer origem.
+
+Gravação na entidade `Xml` (mesmos campos do `ManifestacaoService`, só se
+`DataDesconhecimento` e `DataNaoRealizacao` ainda estiverem vazias):
+
+| Evento | Campos |
+|---|---|
+| 210240 | `DataNaoRealizacao` = data do `dhRegEvento`; `MotivoNaoRealizacao` = `detEvento.xJust` (na falta, `xEvento`); `Situacao` = `"Operação não realizada registrada"` |
+| 210220 | `DataDesconhecimento` = data do `dhRegEvento`; `Situacao` = `"Desconhecimento registrado"` |
+
+No `XmlDto` isso aparece como `Recusada`/`DataRecusa`/`MotivoRecusa` (ver
+`AggilleDFe.Application/DTOs/XML_DTO.md`).
+
+CTe não tem recusa nesta consulta: o equivalente (Prestação de Serviço em
+Desacordo, 610110) é do tomador e não é tratado.
+
 ## Logs (`LOGS`)
 
 - Uma linha por cancelamento registrado (`NFe:`/`CTe: cancelamento registrado
   (consulta de situação na SEFAZ).`, com chave e XmlId).
+- Uma linha por recusa registrada (`NFe: Operação Não Realizada do
+  destinatário registrada ...` / `NFe: Desconhecimento da Operação do
+  destinatário registrado ...`, com chave e XmlId).
 - Uma linha por erro de consulta (com a chave).
 - Uma linha de resumo por execução: documentos consultados, cancelamentos
-  registrados e erros (`QuantidadeXmls` = quantidade consultada).
+  registrados, recusas registradas e erros (`QuantidadeXmls` = quantidade
+  consultada).
 - Falha de configuração (certificado ausente, UF/ambiente inválido) gera uma
   linha de log e encerra a consulta sem alterar nada.
 

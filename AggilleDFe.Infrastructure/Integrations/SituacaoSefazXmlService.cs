@@ -26,9 +26,21 @@ public class SituacaoSefazXmlService(
     // Situações do evento (retEvento) que indicam evento registrado/vinculado.
     private static readonly int[] CStatsEventoRegistrado = [135, 136, 155];
 
-    private sealed record ResultadoConsulta(string Chave, bool Cancelada, DateOnly? DataCancelamento, string? MotivoCancelamento, string? Erro);
+    // Manifestações conclusivas do destinatário (NFe). A última registrada vale: 210220
+    // (Desconhecimento da Operação) e 210240 (Operação Não Realizada) são recusa — a
+    // nota não pode ser importada, mesma regra do cancelamento; 210200 (Confirmação).
+    private const int TpEventoConfirmacao = 210200;
+    private const int TpEventoDesconhecimento = 210220;
+    private const int TpEventoNaoRealizada = 210240;
 
-    public async Task AtualizarCancelamentosAsync(int empresaId, IReadOnlyCollection<string> chaves, CancellationToken cancellationToken = default)
+    private sealed record RecusaDestinatario(int TpEvento, DateOnly Data, string? Motivo);
+
+    private sealed record ResultadoConsulta(string Chave, bool Cancelada, DateOnly? DataCancelamento, string? MotivoCancelamento, string? Erro)
+    {
+        public RecusaDestinatario? Recusa { get; init; }
+    }
+
+    public async Task AtualizarSituacoesAsync(int empresaId, IReadOnlyCollection<string> chaves, CancellationToken cancellationToken = default)
     {
         if (chaves.Count == 0)
         {
@@ -67,6 +79,7 @@ public class SituacaoSefazXmlService(
         }
 
         var canceladas = 0;
+        var recusadas = 0;
         var erros = 0;
         foreach (var resultado in resultados)
         {
@@ -77,29 +90,64 @@ public class SituacaoSefazXmlService(
                 continue;
             }
 
-            if (!resultado.Cancelada)
+            if (!resultado.Cancelada && resultado.Recusa is null)
             {
                 continue;
             }
 
             var xml = await xmlRepository.ObterPorChaveAsync(resultado.Chave, cancellationToken);
-            if (xml is null || xml.Cancelada == "S")
+            if (xml is null)
             {
                 continue;
             }
 
-            xml.Cancelada = "S";
-            xml.DataCancelamento = resultado.DataCancelamento ?? DateOnly.FromDateTime(DateTime.Now);
-            xml.MotivoCancelamento = resultado.MotivoCancelamento;
-            await xmlRepository.AtualizarAsync(xml, cancellationToken);
-            canceladas++;
-
             var tipo = xml.Modelo == "57" ? "CTe" : "NFe";
-            await LogarAsync(empresa.Id, $"{tipo}: cancelamento registrado (consulta de situação na SEFAZ).", chave: xml.Chave, xmlId: xml.Id, cancellationToken: cancellationToken);
+            var mensagens = new List<string>();
+
+            if (resultado.Cancelada && xml.Cancelada != "S")
+            {
+                xml.Cancelada = "S";
+                xml.DataCancelamento = resultado.DataCancelamento ?? DateOnly.FromDateTime(DateTime.Now);
+                xml.MotivoCancelamento = resultado.MotivoCancelamento;
+                canceladas++;
+                mensagens.Add($"{tipo}: cancelamento registrado (consulta de situação na SEFAZ).");
+            }
+
+            // Recusa do destinatário: grava nos mesmos campos da manifestação feita pelo
+            // AggilleDFe (ManifestacaoService), que é como a listagem identifica Recusada.
+            if (resultado.Recusa is { } recusa && xml.DataDesconhecimento is null && xml.DataNaoRealizacao is null)
+            {
+                if (recusa.TpEvento == TpEventoNaoRealizada)
+                {
+                    xml.DataNaoRealizacao = recusa.Data;
+                    xml.MotivoNaoRealizacao = recusa.Motivo;
+                    xml.Situacao = "Operação não realizada registrada";
+                    mensagens.Add($"{tipo}: Operação Não Realizada do destinatário registrada (consulta de situação na SEFAZ).");
+                }
+                else
+                {
+                    xml.DataDesconhecimento = recusa.Data;
+                    xml.Situacao = "Desconhecimento registrado";
+                    mensagens.Add($"{tipo}: Desconhecimento da Operação do destinatário registrado (consulta de situação na SEFAZ).");
+                }
+
+                recusadas++;
+            }
+
+            if (mensagens.Count == 0)
+            {
+                continue;
+            }
+
+            await xmlRepository.AtualizarAsync(xml, cancellationToken);
+            foreach (var mensagem in mensagens)
+            {
+                await LogarAsync(empresa.Id, mensagem, chave: xml.Chave, xmlId: xml.Id, cancellationToken: cancellationToken);
+            }
         }
 
         await LogarAsync(empresa.Id,
-            $"Consulta de situação na SEFAZ (listagem de XMLs): {chaves.Count} documento(s) consultado(s), {canceladas} cancelamento(s) registrado(s), {erros} erro(s).",
+            $"Consulta de situação na SEFAZ (listagem de XMLs): {chaves.Count} documento(s) consultado(s), {canceladas} cancelamento(s) registrado(s), {recusadas} recusa(s) do destinatário registrada(s), {erros} erro(s).",
             quantidadeXmls: chaves.Count, horaInicio: inicio, cancellationToken: cancellationToken);
     }
 
@@ -138,26 +186,48 @@ public class SituacaoSefazXmlService(
         using var servicosNFe = new ServicosNFe(configuracao, certificado);
         var retorno = servicosNFe.NfeConsultaProtocolo(chave).Retorno;
 
-        var eventoCancelamento = retorno.procEventoNFe?
+        // Última manifestação conclusiva do destinatário registrada na nota; só é recusa
+        // se for Desconhecimento ou Operação Não Realizada (uma Confirmação posterior
+        // prevalece).
+        var ultimaManifestacao = retorno.procEventoNFe?
             .Where(p => p.retEvento?.infEvento is { } inf
-                && inf.tpEvento is { } tp && ((int)tp == TpEventoCancelamento || (int)tp == TpEventoCancelamentoSubstituicao)
+                && inf.tpEvento is { } tp && (int)tp is TpEventoConfirmacao or TpEventoDesconhecimento or TpEventoNaoRealizada
                 && CStatsEventoRegistrado.Contains(inf.cStat))
             .OrderByDescending(p => p.retEvento.infEvento.dhRegEvento)
             .FirstOrDefault();
 
-        if (eventoCancelamento is not null)
+        RecusaDestinatario? recusa = null;
+        if (ultimaManifestacao?.retEvento.infEvento is { } infManifestacao && (int)infManifestacao.tpEvento! != TpEventoConfirmacao)
         {
-            var infRet = eventoCancelamento.retEvento.infEvento;
-            var motivo = eventoCancelamento.evento?.infEvento?.detEvento?.xJust ?? infRet.xEvento ?? infRet.xMotivo;
-            return new ResultadoConsulta(chave, true, DateOnly.FromDateTime(infRet.dhRegEvento), motivo, null);
+            var motivoRecusa = ultimaManifestacao.evento?.infEvento?.detEvento?.xJust ?? infManifestacao.xEvento;
+            recusa = new RecusaDestinatario((int)infManifestacao.tpEvento!, DateOnly.FromDateTime(infManifestacao.dhRegEvento), motivoRecusa);
         }
 
-        if (CStatsCancelado.Contains(retorno.cStat))
-        {
-            return new ResultadoConsulta(chave, true, null, retorno.xMotivo, null);
-        }
+        return SituacaoCancelamentoNfe() with { Recusa = recusa };
 
-        return RetornoNaoCancelado(chave, retorno.cStat, retorno.xMotivo);
+        ResultadoConsulta SituacaoCancelamentoNfe()
+        {
+            var eventoCancelamento = retorno.procEventoNFe?
+                .Where(p => p.retEvento?.infEvento is { } inf
+                    && inf.tpEvento is { } tp && ((int)tp == TpEventoCancelamento || (int)tp == TpEventoCancelamentoSubstituicao)
+                    && CStatsEventoRegistrado.Contains(inf.cStat))
+                .OrderByDescending(p => p.retEvento.infEvento.dhRegEvento)
+                .FirstOrDefault();
+
+            if (eventoCancelamento is not null)
+            {
+                var infRet = eventoCancelamento.retEvento.infEvento;
+                var motivo = eventoCancelamento.evento?.infEvento?.detEvento?.xJust ?? infRet.xEvento ?? infRet.xMotivo;
+                return new ResultadoConsulta(chave, true, DateOnly.FromDateTime(infRet.dhRegEvento), motivo, null);
+            }
+
+            if (CStatsCancelado.Contains(retorno.cStat))
+            {
+                return new ResultadoConsulta(chave, true, null, retorno.xMotivo, null);
+            }
+
+            return RetornoNaoCancelado(chave, retorno.cStat, retorno.xMotivo);
+        }
     }
 
     private static ResultadoConsulta ConsultarCte(Empresa empresa, string diretorioSchemas, Estado ufEmitente, string chave)

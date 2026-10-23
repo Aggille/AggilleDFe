@@ -25,4 +25,7 @@ public class XmlDto
     public string? Situacao { get; set; }
     public DateOnly? DataCancelamento { get; set; }
     public string? MotivoCancelamento { get; set; }
+    public bool Recusada { get; set; }
+    public DateOnly? DataRecusa { get; set; }
+    public string? MotivoRecusa { get; set; }
 }
