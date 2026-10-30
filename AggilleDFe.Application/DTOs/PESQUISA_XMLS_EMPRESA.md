@@ -48,12 +48,26 @@ atualizada e saber quais documentos **não podem ser importados**:
 - **recusado pelo destinatário** — a empresa registrou Desconhecimento da
   Operação (210220) ou Operação Não Realizada (210240), aqui ou em outro
   sistema (`recusada`, `motivoRecusa`, `dataRecusa`). Vale a mesma regra da
-  cancelada: a nota não deve ser importada.
+  cancelada: a nota não deve ser importada;
+- **rejeitado pela SEFAZ** — o protocolo do documento (`statusNfe`) não é de
+  autorização (100/150), ex.: uso denegado 110/301/302/303.
+
+**Nesta pesquisa, documento recusado ou rejeitado é devolvido como cancelado**
+(`cancelada = true`), com ou sem `consultaSefaz` — o integrador só precisa
+olhar `cancelada`. Quando o documento não foi cancelado pelo emitente:
+
+| Situação | `dataCancelamento` | `motivoCancelamento` |
+|---|---|---|
+| Recusado | `dataRecusa` | `"Recusada pelo destinatário: <motivoRecusa>"` |
+| Rejeitado | `null` | `"Rejeitada pela SEFAZ: <statusNfe> - <mensagemNfe>"` |
+
+`recusada`/`dataRecusa`/`motivoRecusa` continuam vindo preenchidos. A mesma
+regra vale para a listagem da tela Web (`GET /api/v1/xmls`, ver `XML_DTO.md`).
 
 Com `consultaSefaz=true`:
 
 1. A lista do período é montada normalmente.
-2. Para cada documento **ainda não cancelado nem recusado** (NFe modelo 55 /
+2. Para cada documento **ainda não cancelado, recusado nem rejeitado** (NFe modelo 55 /
    CTe modelo 57, chave de 44 dígitos), é feita a consulta protocolo na SEFAZ
    (`ISituacaoSefazXmlService`, implementado em
    `AggilleDFe.Infrastructure/Integrations/SituacaoSefazXmlService.cs` — ver
@@ -63,13 +77,14 @@ Com `consultaSefaz=true`:
    informada pelo emitente no evento de cancelamento). As recusas do
    destinatário (NFe) são gravadas nos mesmos campos da manifestação feita
    pelo AggilleDFe: `DATA_NAO_REALIZACAO` + `MOTIVO_NAO_REALIZACAO` ou
-   `DATA_DESCONHECIMENTO`, e `SITUACAO`.
+   `DATA_DESCONHECIMENTO`, e `SITUACAO`. O uso denegado (rejeição) é gravado
+   em `STATUS_NFE`/`MENSAGEM_NFE`.
 4. A lista é recarregada do banco e devolvida já com esses campos atualizados.
 
 Observações:
 
-- Documentos já cancelados ou recusados não são consultados de novo (os dois
-  casos já impedem a importação).
+- Documentos já cancelados, recusados ou rejeitados não são consultados de
+  novo (todos já impedem a importação).
 - Recusa só se aplica a NFe: é a **última** manifestação conclusiva do
   destinatário que vale (uma Confirmação da Operação registrada depois da
   recusa prevalece).
@@ -80,7 +95,7 @@ Observações:
   **não** mudam o status `200`: a lista volta com a situação que já estava
   gravada e o erro fica registrado em LOGS. Cada consulta gera uma linha de
   resumo em LOGS (consultados / cancelamentos registrados / recusas
-  registradas / erros).
+  registradas / rejeições registradas / erros).
 
 ### `cnpjEmpresa`
 

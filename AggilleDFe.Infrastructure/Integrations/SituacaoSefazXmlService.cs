@@ -38,7 +38,13 @@ public class SituacaoSefazXmlService(
     private sealed record ResultadoConsulta(string Chave, bool Cancelada, DateOnly? DataCancelamento, string? MotivoCancelamento, string? Erro)
     {
         public RecusaDestinatario? Recusa { get; init; }
+
+        // Rejeição da SEFAZ (uso denegado): cStat/xMotivo da situação do documento.
+        public (int CStat, string? XMotivo)? Rejeicao { get; init; }
     }
+
+    // Situações do documento que indicam uso denegado (documento rejeitado pela SEFAZ).
+    private static readonly int[] CStatsDenegado = [110, 301, 302, 303];
 
     public async Task AtualizarSituacoesAsync(int empresaId, IReadOnlyCollection<string> chaves, CancellationToken cancellationToken = default)
     {
@@ -80,6 +86,7 @@ public class SituacaoSefazXmlService(
 
         var canceladas = 0;
         var recusadas = 0;
+        var rejeitadas = 0;
         var erros = 0;
         foreach (var resultado in resultados)
         {
@@ -90,7 +97,7 @@ public class SituacaoSefazXmlService(
                 continue;
             }
 
-            if (!resultado.Cancelada && resultado.Recusa is null)
+            if (!resultado.Cancelada && resultado.Recusa is null && resultado.Rejeicao is null)
             {
                 continue;
             }
@@ -134,6 +141,16 @@ public class SituacaoSefazXmlService(
                 recusadas++;
             }
 
+            // Uso denegado: grava o cStat/xMotivo da SEFAZ no protocolo do documento
+            // (StatusNfe/MensagemNfe), que é como a listagem identifica a nota rejeitada.
+            if (resultado.Rejeicao is { } rejeicao && xml.StatusNfe != rejeicao.CStat)
+            {
+                xml.StatusNfe = rejeicao.CStat;
+                xml.MensagemNfe = rejeicao.XMotivo is { Length: > 254 } m ? m[..254] : rejeicao.XMotivo;
+                rejeitadas++;
+                mensagens.Add($"{tipo}: rejeição da SEFAZ registrada - cStat {rejeicao.CStat} {rejeicao.XMotivo} (consulta de situação na SEFAZ).");
+            }
+
             if (mensagens.Count == 0)
             {
                 continue;
@@ -147,7 +164,7 @@ public class SituacaoSefazXmlService(
         }
 
         await LogarAsync(empresa.Id,
-            $"Consulta de situação na SEFAZ (listagem de XMLs): {chaves.Count} documento(s) consultado(s), {canceladas} cancelamento(s) registrado(s), {recusadas} recusa(s) do destinatário registrada(s), {erros} erro(s).",
+            $"Consulta de situação na SEFAZ (listagem de XMLs): {chaves.Count} documento(s) consultado(s), {canceladas} cancelamento(s) registrado(s), {recusadas} recusa(s) do destinatário registrada(s), {rejeitadas} rejeição(ões) da SEFAZ registrada(s), {erros} erro(s).",
             quantidadeXmls: chaves.Count, horaInicio: inicio, cancellationToken: cancellationToken);
     }
 
@@ -259,13 +276,24 @@ public class SituacaoSefazXmlService(
         return RetornoNaoCancelado(chave, retorno.cStat, retorno.xMotivo);
     }
 
-    // 100 (autorizado) e 110/301/302 (denegado) são situações válidas sem cancelamento;
-    // qualquer outro cStat (ex.: 217 - não consta na base, 656 - consumo indevido) é
-    // devolvido como erro para ficar registrado em LOGS.
-    private static ResultadoConsulta RetornoNaoCancelado(string chave, int cStat, string? xMotivo) =>
-        cStat is 100 or 110 or 301 or 302
-            ? new ResultadoConsulta(chave, false, null, null, null)
-            : new ResultadoConsulta(chave, false, null, null, $"SEFAZ retornou cStat {cStat} - {xMotivo}.");
+    // 100/150 (autorizado) é situação válida sem cancelamento; 110/301/302/303 (uso
+    // denegado) é rejeição da SEFAZ — a nota não pode ser importada, mesma regra do
+    // cancelamento; qualquer outro cStat (ex.: 217 - não consta na base, 656 - consumo
+    // indevido) é devolvido como erro para ficar registrado em LOGS.
+    private static ResultadoConsulta RetornoNaoCancelado(string chave, int cStat, string? xMotivo)
+    {
+        if (cStat is 100 or 150)
+        {
+            return new ResultadoConsulta(chave, false, null, null, null);
+        }
+
+        if (CStatsDenegado.Contains(cStat))
+        {
+            return new ResultadoConsulta(chave, false, null, null, null) { Rejeicao = (cStat, xMotivo) };
+        }
+
+        return new ResultadoConsulta(chave, false, null, null, $"SEFAZ retornou cStat {cStat} - {xMotivo}.");
+    }
 
     private Task LogarAsync(int empresaId, string mensagem, string? chave = null, int? xmlId = null, int? quantidadeXmls = null, TimeOnly? horaInicio = null, CancellationToken cancellationToken = default)
     {

@@ -70,7 +70,7 @@ public class XmlService(IXmlRepository repository, IEmpresaRepository empresaRep
         if (consultaSefaz)
         {
             var chaves = xmls
-                .Where(x => x.Cancelada != "S" && !EstaRecusada(x) && (x.Modelo == "55" || x.Modelo == "57") && x.Chave.Length == 44)
+                .Where(x => x.Cancelada != "S" && !EstaRecusada(x) && !EstaRejeitada(x) && (x.Modelo == "55" || x.Modelo == "57") && x.Chave.Length == 44)
                 .Select(x => x.Chave)
                 .Distinct()
                 .ToList();
@@ -89,7 +89,7 @@ public class XmlService(IXmlRepository repository, IEmpresaRepository empresaRep
             : repository.PesquisarAsync(empresa.Id, null, null, modelo, null, dataInicial, dataFinal, cancellationToken);
     }
 
-    private static XmlDto ParaDto(Xml xml) => new()
+    private static XmlDto MapearCampos(Xml xml) => new()
     {
         Id = xml.Id,
         Chave = xml.Chave,
@@ -125,4 +125,34 @@ public class XmlService(IXmlRepository repository, IEmpresaRepository empresaRep
     // da Operação (210220) registrados — manifestados pelo AggilleDFe ou encontrados
     // na consulta de situação na SEFAZ (consultaSefaz).
     private static bool EstaRecusada(Xml xml) => xml.DataNaoRealizacao is not null || xml.DataDesconhecimento is not null;
+
+    // Rejeitada pela SEFAZ: o protocolo do documento não é de autorização (100 -
+    // autorizado; 150 - autorizado fora de prazo), ex.: 110/301/302/303 - uso denegado.
+    private static bool EstaRejeitada(Xml xml) => xml.StatusNfe is { } cStat && cStat is not (100 or 150);
+
+    // Nota recusada pelo destinatário ou rejeitada pela SEFAZ não pode ser importada,
+    // então é tratada como cancelada (na API de integração e na tela Web); o motivo
+    // indica a origem.
+    private static XmlDto ParaDto(Xml xml)
+    {
+        var dto = MapearCampos(xml);
+        if (dto.Cancelada)
+        {
+            return dto;
+        }
+
+        if (dto.Recusada)
+        {
+            dto.Cancelada = true;
+            dto.DataCancelamento = dto.DataRecusa;
+            dto.MotivoCancelamento = $"Recusada pelo destinatário: {dto.MotivoRecusa}";
+        }
+        else if (EstaRejeitada(xml))
+        {
+            dto.Cancelada = true;
+            dto.MotivoCancelamento = $"Rejeitada pela SEFAZ: {xml.StatusNfe} - {xml.MensagemNfe}";
+        }
+
+        return dto;
+    }
 }

@@ -100,7 +100,9 @@
                 <CellTemplate>
                     @if (context.Item.Cancelada)
                     {
-                        <MudChip T="string" Color="Color.Error" Size="Size.Small">Cancelada</MudChip>
+                        <MudTooltip Text="@(context.Item.MotivoCancelamento ?? "Cancelada pelo emitente")">
+                            <MudChip T="string" Color="Color.Error" Size="Size.Small">Cancelada</MudChip>
+                        </MudTooltip>
                     }
                     else
                     {

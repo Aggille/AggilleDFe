@@ -21,8 +21,10 @@
   lista de empresas já carregada para o filtro), Modelo (NFe/CTe/NFCe,
   mapeado de `"55"`/`"57"`/`"65"`), Número/Série, Chave, Fornecedor/Emitente,
   Emissão, Baixado em, Valor Total, Situação (chip vermelho "Cancelada"
-  quando `Cancelada == true`, senão chip verde com o valor de `Situacao` ou
-  "Documento completo"), e uma coluna de Ações.
+  quando `Cancelada == true` — inclui nota recusada pelo destinatário ou
+  rejeitada pela SEFAZ, ver `AggilleDFe.Application/DTOs/XML_DTO.md` — com
+  tooltip do `MotivoCancelamento`; senão chip verde com o valor de `Situacao`
+  ou "Documento completo"), e uma coluna de Ações.
 - Ações por linha (ver `AggilleDFe.Infrastructure/Integrations/MANIFESTACAO.md`):
   - **Baixar XML** (todas as linhas): `NavigationManager.NavigateTo(...,
     forceLoad: true)` para `GET /api/v1/xmls/{chave}/arquivo` — o endpoint

@@ -28,6 +28,14 @@ XMLs baixados — permanecem só na entidade:
   Realizada — na falta, `"Operação Não Realizada"`; `"Desconhecimento da
   Operação"` para desconhecimento; `null` quando não recusada
 
+Nota recusada ou rejeitada pela SEFAZ (`StatusNfe` diferente de 100/150) é
+tratada como cancelada em todo `XmlDto` — tela Web (`GET /api/v1/xmls`) e
+pesquisa da API de integração (`GET /api/v1/dfe/xmls`,
+`PESQUISA_XMLS_EMPRESA.md`): `Cancelada = true`, e quando o emitente não
+cancelou, `DataCancelamento`/`MotivoCancelamento` indicam a origem
+(`"Recusada pelo destinatário: <MotivoRecusa>"` com `DataRecusa`, ou
+`"Rejeitada pela SEFAZ: <StatusNfe> - <MensagemNfe>"`).
+
 ## Filtros da consulta (`GET /api/v1/xmls`)
 
 - `empresaId` (int, opcional): filtra por uma empresa específica

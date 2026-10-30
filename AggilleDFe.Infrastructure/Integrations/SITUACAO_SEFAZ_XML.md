@@ -44,9 +44,18 @@ Gravação na entidade `Xml`:
 | `DataCancelamento` | data de registro do evento (`dhRegEvento`); sem evento, a data atual |
 | `MotivoCancelamento` | justificativa do emitente (`xJust` do evento — NFe: `detEvento.xJust`; CTe: `evCancCTe.xJust`); na falta, `xEvento`/`xMotivo` |
 
-`cStat` 100 (autorizado) e 110/301/302 (denegado) são situações válidas sem
-cancelamento — nada é gravado. Qualquer outro `cStat` (ex.: 217 — não consta
-na base, 656 — consumo indevido) é tratado como erro.
+`cStat` 100/150 (autorizado) é situação válida sem cancelamento — nada é
+gravado. Qualquer `cStat` fora das regras de cancelamento e de rejeição (ex.:
+217 — não consta na base, 656 — consumo indevido) é tratado como erro.
+
+## Regra de rejeição (uso denegado)
+
+`cStat` 110, 301, 302 ou 303 na situação do documento é uso denegado: a nota
+foi rejeitada pela SEFAZ e não pode ser importada (mesma regra da cancelada).
+Grava em `Xml.StatusNfe` o `cStat` e em `Xml.MensagemNfe` o `xMotivo` (campos
+do protocolo do documento). Na pesquisa da API, `StatusNfe` diferente de
+100/150 faz o documento sair como `cancelada` (ver
+`AggilleDFe.Application/DTOs/PESQUISA_XMLS_EMPRESA.md`).
 
 ## Regra de recusa do destinatário (NFe)
 
@@ -85,9 +94,11 @@ Desacordo, 610110) é do tomador e não é tratado.
 - Uma linha por recusa registrada (`NFe: Operação Não Realizada do
   destinatário registrada ...` / `NFe: Desconhecimento da Operação do
   destinatário registrado ...`, com chave e XmlId).
+- Uma linha por rejeição registrada (`NFe:`/`CTe: rejeição da SEFAZ
+  registrada - cStat ...`, com chave e XmlId).
 - Uma linha por erro de consulta (com a chave).
 - Uma linha de resumo por execução: documentos consultados, cancelamentos
-  registrados, recusas registradas e erros (`QuantidadeXmls` = quantidade
+  registrados, recusas registradas, rejeições registradas e erros (`QuantidadeXmls` = quantidade
   consultada).
 - Falha de configuração (certificado ausente, UF/ambiente inválido) gera uma
   linha de log e encerra a consulta sem alterar nada.
